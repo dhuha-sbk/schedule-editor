@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Hub Optimization Schedule Editor</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- HTML2PDF for PDF Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            900: '#1e3a8a',
+                        }
+                    },
+                    keyframes: {
+                        'slide-up': {
+                            '0%': { transform: 'translateY(100%)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
+                        },
+                        'fade-in': {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        }
+                    },
+                    animation: {
+                        'slide-up': 'slide-up 0.2s ease-out',
+                        'fade-in': 'fade-in 0.2s ease-out',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .trans-all { transition: all 0.2s ease-in-out; }
+        
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white; -webkit-print-color-adjust: exact; }
+            #root { height: auto; overflow: visible; }
+        }
+        
+        .glass-header {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            color: white;
+        }
+        .btn-modern {
+            @apply px-4 py-2 rounded-lg font-semibold text-sm transition-all shadow-sm border border-white/20 hover:bg-white/10 flex items-center gap-2;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 h-screen flex flex-col overflow-hidden selection:bg-brand-100 selection:text-brand-900">
+    <div id="root" class="h-full flex flex-col"></div>
+
+    <script type="text/babel">
+        const { useState, useMemo, useEffect, useRef } = React;
+
+        // --- Icons ---
+        const Icon = ({ children, className, ...props }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>{children}</svg>
+        );
+        const Icons = {
+            Plus: (p) => <Icon {...p}><path d="M5 12h14"/><path d="M12 5v14"/></Icon>,
+            Trash: (p) => <Icon {...p}><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></Icon>,
+            Calendar: (p) => <Icon {...p}><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></Icon>,
+            Chart: (p) => <Icon {...p}><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></Icon>,
+            List: (p) => <Icon {...p}><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></Icon>,
+            Download: (p) => <Icon {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></Icon>,
+            Upload: (p) => <Icon {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></Icon>,
+            Save: (p) => <Icon {...p}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></Icon>,
+            Eye: (p) => <Icon {...p}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></Icon>,
+            EyeOff: (p) => <Icon {...p}><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" x2="23" y1="1" y2="23"/></Icon>,
+            Clock: (p) => <Icon {...p}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></Icon>,
+            Alert: (p) => <Icon {...p}><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></Icon>,
+            CheckCircle: (p) => <Icon {...p}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></Icon>,
+            Briefcase: (p) => <Icon {...p}><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></Icon>,
+            User: (p) => <Icon {...p}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></Icon>,
+            FileText: (p) => <Icon {...p}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></Icon>,
+            Users: (p) => <Icon {...p}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></Icon>,
+            X: (p) => <Icon {...p}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></Icon>,
+            ChevronUp: (p) => <Icon {...p}><polyline points="18 15 12 9 6 15"/></Icon>,
+            ChevronDown: (p) => <Icon {...p}><polyline points="6 9 12 15 18 9"/></Icon>,
+            ChevronLeft: (p) => <Icon {...p}><polyline points="15 18 9 12 15 6"/></Icon>,
+            ChevronRight: (p) => <Icon {...p}><polyline points="9 18 15 12 9 6"/></Icon>,
+            Indent: (p) => <Icon {...p}><polyline points="3 6 3 18"/><line x1="21" y1="6" x2="11" y2="6"/><line x1="21" y1="12" x2="11" y2="12"/><line x1="21" y1="18" x2="11" y2="18"/></Icon>,
+            Outdent: (p) => <Icon {...p}><polyline points="3 6 3 18"/><line x1="21" y1="6" x2="11" y2="6"/><line x1="21" y1="12" x2="11" y2="12"/><line x1="21" y1="18" x2="11" y2="18"/><polyline points="7 12 11 16 11 8"/></Icon>,
+            Sun: (p) => <Icon {...p}><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></Icon>,
+            Settings: (p) => <Icon {...p}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></Icon>,
+            Code: (p) => <Icon {...p}><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></Icon>
+        };
+
+        // --- Data & Constants ---
+        const INITIAL_DATA = [
+            { "id": 1, "task": "PHASE 1: Phase Design Study (PDS)", "start": "2025-01-01", "end": "2025-03-31", "progress": 100, "status": "Completed", "owner": "PM", "level": 0 },
+            { "id": 2, "task": "Deliverable: Mockup Design", "start": "2025-01-15", "end": "2025-02-28", "progress": 100, "status": "Completed", "owner": "Dev", "level": 1 },
+            { "id": 3, "task": "Deliverable: PDS Presentation", "start": "2025-03-01", "end": "2025-03-31", "progress": 100, "status": "Completed", "owner": "PM", "level": 1 },
+            { "id": 4, "task": "PHASE 2: Critical Design Review (CDR)", "start": "2025-04-01", "end": "2025-05-30", "progress": 80, "status": "In Progress", "owner": "PM", "level": 0 },
+            { "id": 5, "task": "Technical Development Plan & Refinement", "start": "2025-04-01", "end": "2025-05-15", "progress": 60, "status": "In Progress", "owner": "PM", "level": 1 },
+            { "id": 6, "task": "Hardware Resources Analysis", "start": "2025-04-15", "end": "2025-05-30", "progress": 40, "status": "In Progress", "owner": "Dev", "level": 1 },
+            { "id": 7, "task": "System Deployment Strategy", "start": "2025-05-01", "end": "2025-06-15", "progress": 30, "status": "In Progress", "owner": "Dev", "level": 1 },
+            { "id": 8, "task": "Implement Existing Data (V1)", "start": "2025-05-01", "end": "2025-08-31", "progress": 20, "status": "In Progress", "owner": "Dev", "level": 1 },
+            { "id": 10, "task": "PHASE 3: Implement Real Data", "start": "2026-01-01", "end": "2026-05-31", "progress": 0, "status": "Not Started", "owner": "Data Services", "level": 0 },
+            { "id": 14, "task": "PHASE 4: Site Acceptance Test (SAT)", "start": "2027-03-01", "end": "2027-04-30", "progress": 0, "status": "Not Started", "owner": "PM", "level": 0 },
+            { "id": 17, "task": "Technical Support (Year 1)", "start": "2028-01-01", "end": "2028-12-31", "progress": 0, "status": "Not Started", "owner": "Dev", "level": 0 }
+        ];
+
+        const INITIAL_OWNERS = {
+            "PM": { name: "Project Manager", color: "bg-blue-100 text-blue-800", avatar: "PM" },
+            "Dev": { name: "Developer", color: "bg-amber-100 text-amber-800", avatar: "DV" },
+            "Data Services": { name: "Data Services", color: "bg-purple-100 text-purple-800", avatar: "DS" },
+            "Modeling": { name: "Modeling Team", color: "bg-cyan-100 text-cyan-800", avatar: "MT" }
+        };
+
+        const StatCard = ({ title, value, subtext, icon: IconComp, trend }) => (
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-start justify-between min-w-[200px] flex-1">
+                <div>
+                    <h3 className="text-xs font-bold text-slate-500 mb-1 tracking-wide uppercase">{title}</h3>
+                    <div className="text-2xl font-bold text-slate-900">{value}</div>
+                    {subtext && <div className={`text-xs mt-1 font-medium ${trend === 'bad' ? 'text-red-600' : 'text-slate-400'}`}>{subtext}</div>}
+                </div>
+                {IconComp && (
+                    <div className="p-2 bg-slate-50 rounded-lg text-slate-400">
+                        <IconComp className="w-5 h-5" />
+                    </div>
+                )}
+            </div>
+        );
+
+        // --- Modals ---
+        
+        const TeamModal = ({ isOpen, onClose, owners, setOwners }) => {
+            const [newId, setNewId] = useState("");
+            const [newName, setNewName] = useState("");
+            const [newAvatar, setNewAvatar] = useState("");
+            const [error, setError] = useState("");
+
+            if (!isOpen) return null;
+
+            const handleAdd = () => {
+                if (!newId || !newName) { setError("ID and Name required."); return; }
+                if (owners[newId]) { setError("ID exists."); return; }
+                const colors = ["bg-rose-100 text-rose-800", "bg-indigo-100 text-indigo-800", "bg-teal-100 text-teal-800", "bg-lime-100 text-lime-800"];
+                setOwners(prev => ({ ...prev, [newId]: { name: newName, color: colors[Math.floor(Math.random()*colors.length)], avatar: newAvatar || newId.substring(0,2).toUpperCase() } }));
+                setNewId(""); setNewName(""); setNewAvatar(""); setError("");
+            };
+
+            return (
+                <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-slide-up">
+                        <div className="p-4 border-b border-slate-100 flex justify-between items-center">
+                            <h3 className="font-bold text-lg flex items-center gap-2"><Icons.Users className="w-5 h-5" /> Manage Team</h3>
+                            <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded-full"><Icons.X className="w-5 h-5 text-slate-400" /></button>
+                        </div>
+                        <div className="p-6">
+                            <div className="space-y-4 max-h-[300px] overflow-y-auto mb-6 pr-2">
+                                {Object.entries(owners).map(([key, data]) => (
+                                    <div key={key} className="flex items-center justify-between p-2 bg-slate-50 rounded-lg border border-slate-100">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${data.color}`}>{data.avatar}</div>
+                                            <div><div className="text-sm font-bold text-slate-800">{data.name}</div><div className="text-xs text-slate-500">ID: {key}</div></div>
+                                        </div>
+                                        {!['PM','Dev'].includes(key) && <button onClick={() => { const n = {...owners}; delete n[key]; setOwners(n); }}><Icons.Trash className="w-4 h-4 text-slate-400 hover:text-red-500" /></button>}
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                                <h4 className="text-xs font-bold text-slate-500 uppercase mb-3">Add Member</h4>
+                                <div className="grid grid-cols-2 gap-3 mb-3">
+                                    <input type="text" placeholder="ID" value={newId} onChange={e=>setNewId(e.target.value)} className="text-sm rounded-md border-slate-200" />
+                                    <input type="text" placeholder="Avatar" value={newAvatar} onChange={e=>setNewAvatar(e.target.value)} className="text-sm rounded-md border-slate-200" />
+                                </div>
+                                <input type="text" placeholder="Name" value={newName} onChange={e=>setNewName(e.target.value)} className="w-full text-sm rounded-md border-slate-200 mb-3" />
+                                {error && <p className="text-xs text-red-500 mb-2">{error}</p>}
+                                <button onClick={handleAdd} className="w-full py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-bold">Add Profile</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const HolidayModal = ({ isOpen, onClose, holidays, setHolidays }) => {
+            const [date, setDate] = useState("");
+            const [name, setName] = useState("");
+            const [currentMonth, setCurrentMonth] = useState(new Date());
+
+            if (!isOpen) return null;
+
+            const addHoliday = (d) => {
+                 if(d && !holidays.find(h => h.date === d)) {
+                     const holidayName = name || "Holiday";
+                     setHolidays([...holidays, { date: d, name: holidayName }].sort((a,b) => new Date(a.date) - new Date(b.date))); 
+                 }
+            };
+            const removeHoliday = (d) => setHolidays(holidays.filter(h => h.date !== d));
+            
+            // Mini Calendar Helpers
+            const daysInMonth = (y, m) => new Date(y, m + 1, 0).getDate();
+            const firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
+            const days = Array.from({ length: daysInMonth(currentMonth.getFullYear(), currentMonth.getMonth()) }, (_, i) => i + 1);
+            
+            const handleDayClick = (day) => {
+                const dateStr = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day).toISOString().split('T')[0];
+                if(holidays.find(h => h.date === dateStr)) removeHoliday(dateStr);
+                else {
+                    const holidayName = name || "Holiday";
+                    setHolidays([...holidays, { date: dateStr, name: holidayName }].sort((a,b) => new Date(a.date) - new Date(b.date)));
+                }
+            };
+
+            const changeMonth = (delta) => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + delta, 1));
+
+            return (
+                <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-slide-up flex flex-col max-h-[90vh]">
+                        <div className="p-4 border-b border-slate-100 flex justify-between items-center">
+                            <h3 className="font-bold text-lg flex items-center gap-2"><Icons.Sun className="w-5 h-5 text-amber-500" /> Holidays</h3>
+                            <button onClick={onClose}><Icons.X className="w-5 h-5 text-slate-400" /></button>
+                        </div>
+                        <div className="p-6 flex-1 overflow-y-auto">
+                            {/* Manual Input */}
+                             <div className="flex gap-2 mb-2">
+                                <input type="text" placeholder="Holiday Name" value={name} onChange={e=>setName(e.target.value)} className="flex-1 text-sm rounded-md border-slate-200" />
+                            </div>
+                             <div className="flex gap-2 mb-6">
+                                <input type="date" value={date} onChange={e=>setDate(e.target.value)} className="flex-1 text-sm rounded-md border-slate-200" />
+                                <button onClick={()=> {if(date) addHoliday(date); setDate(""); setName("");}} className="bg-brand-600 text-white px-3 py-2 rounded-md font-bold text-sm"><Icons.Plus className="w-4 h-4"/></button>
+                            </div>
+                            
+                            {/* Mini Calendar */}
+                            <div className="border border-slate-200 rounded-lg p-3 mb-6">
+                                <div className="flex justify-between items-center mb-2">
+                                    <button onClick={()=>changeMonth(-1)} className="p-1 hover:bg-slate-100 rounded"><Icons.ChevronLeft className="w-4 h-4"/></button>
+                                    <div className="text-sm font-bold">{currentMonth.toLocaleDateString('en-US', {month:'long', year:'numeric'})}</div>
+                                    <button onClick={()=>changeMonth(1)} className="p-1 hover:bg-slate-100 rounded"><Icons.ChevronRight className="w-4 h-4"/></button>
+                                </div>
+                                <div className="grid grid-cols-7 text-center text-xs mb-1">
+                                    {['S','M','T','W','T','F','S'].map(d=><div key={d} className="font-bold text-slate-400">{d}</div>)}
+                                </div>
+                                <div className="grid grid-cols-7 text-center gap-1">
+                                     {Array(firstDay).fill(null).map((_, i) => <div key={`e-${i}`}></div>)}
+                                     {days.map(d => {
+                                         const dateStr = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), d).toISOString().split('T')[0];
+                                         const isHol = holidays.find(h => h.date === dateStr);
+                                         return (
+                                             <button key={d} onClick={()=>handleDayClick(d)} className={`w-8 h-8 rounded-full flex items-center justify-center text-xs transition-all ${isHol ? 'bg-red-500 text-white font-bold' : 'hover:bg-slate-100 text-slate-700'}`}>
+                                                 {d}
+                                             </button>
+                                         );
+                                     })}
+                                </div>
+                            </div>
+
+                            <h4 className="text-xs font-bold text-slate-500 uppercase mb-2">Selected Dates</h4>
+                            <div className="max-h-[150px] overflow-y-auto space-y-2">
+                                {holidays.length === 0 && <p className="text-sm text-slate-400 text-center italic">No holidays defined.</p>}
+                                {holidays.map(h => (
+                                    <div key={h.date} className="flex justify-between items-center p-2 bg-red-50 text-red-700 rounded-md text-sm border border-red-100">
+                                        <span>{new Date(h.date).toLocaleDateString()} - <b>{h.name}</b></span>
+                                        <button onClick={()=>removeHoliday(h.date)}><Icons.Trash className="w-3.5 h-3.5 opacity-50 hover:opacity-100"/></button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- Main Application ---
+        const App = () => {
+            // Setup & Load
+            const loadState = (key, def) => {
+                const s = localStorage.getItem(key);
+                return s ? JSON.parse(s) : def;
+            };
+
+            const [tasks, setTasks] = useState(() => {
+                const legacy = localStorage.getItem('schedule_data'); // Legacy array check
+                const unified = localStorage.getItem('app_state'); // New unified object
+                if (unified) return JSON.parse(unified).tasks;
+                if (legacy) return JSON.parse(legacy);
+                return INITIAL_DATA;
+            });
+            const [owners, setOwners] = useState(() => {
+                const unified = localStorage.getItem('app_state');
+                return unified ? JSON.parse(unified).owners : (loadState('schedule_owners', INITIAL_OWNERS));
+            });
+            const [holidays, setHolidays] = useState(() => {
+                const unified = localStorage.getItem('app_state');
+                return unified ? JSON.parse(unified).holidays : [];
+            });
+
+            const [view, setView] = useState('table'); 
+            const [isPreview, setIsPreview] = useState(false);
+            const [filterOwner, setFilterOwner] = useState('All');
+            const [now, setNow] = useState(new Date());
+            const [modals, setModals] = useState({ team: false, holiday: false });
+            const [menus, setMenus] = useState({ export: false, settings: false });
+            const [toast, setToast] = useState(false);
+
+            useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t); }, []);
+
+            // Computed
+            const { stats, processedTasks } = useMemo(() => {
+                let currentPhaseEnd = null;
+                const processed = tasks.map((t, idx) => {
+                    const isHeader = t.level === 0;
+                    const endDate = new Date(t.end);
+                    if (isHeader) currentPhaseEnd = endDate;
+                    
+                    let computedStatus = t.status;
+                    // Auto-calculate overdue if not completed/100% and date passed
+                    if (t.status !== 'Completed' && t.progress < 100 && endDate < new Date(now.toDateString())) {
+                        computedStatus = 'Overdue';
+                    }
+
+                    let warning = null;
+                    if (!isHeader && currentPhaseEnd && endDate > currentPhaseEnd) warning = "Exceeds Phase Timeline";
+                    if (computedStatus === 'Overdue') warning = warning ? `${warning} • Past Due` : "Past Due";
+
+                    return { ...t, computedStatus, warning, isHeader, idx };
+                });
+                
+                const dates = processed.flatMap(t => [new Date(t.start), new Date(t.end)]);
+                const start = dates.length ? new Date(Math.min(...dates)) : new Date();
+                const end = dates.length ? new Date(Math.max(...dates)) : new Date();
+                const duration = Math.max(0, Math.round((end - start)/(1000*60*60*24*30)));
+
+                const total = processed.length;
+                const completed = processed.filter(t => t.status === 'Completed' || t.progress === 100).length;
+                const atRisk = processed.filter(t => t.status === 'At Risk' || t.computedStatus === 'Overdue').length;
+                
+                return { 
+                    stats: { 
+                        total, 
+                        completed,
+                        atRisk,
+                        duration,
+                        start, end
+                    }, 
+                    processedTasks: processed 
+                };
+            }, [tasks, now]);
+
+            // Handlers
+            const handleUpdate = (id, field, value) => {
+                setTasks(prev => prev.map(t => {
+                    if (t.id !== id) return t;
+                    const u = { ...t, [field]: value };
+                    
+                    // Logic adjustments
+                    if (field === 'start' && new Date(value) > new Date(u.end)) u.end = value;
+                    if (field === 'progress' && value === 100) u.status = 'Completed';
+                    if (field === 'status' && value === 'Completed') u.progress = 100;
+                    if (field === 'progress' && value < 100 && u.status === 'Completed') u.status = 'In Progress';
+
+                    return u;
+                }));
+            };
+
+            const handleMove = (idx, direction) => {
+                if ((idx === 0 && direction === -1) || (idx === tasks.length - 1 && direction === 1)) return;
+                const newTasks = [...tasks];
+                const temp = newTasks[idx];
+                newTasks[idx] = newTasks[idx + direction];
+                newTasks[idx + direction] = temp;
+                setTasks(newTasks);
+            };
+
+            const handleIndent = (id, change) => {
+                setTasks(prev => prev.map(t => t.id === id ? { ...t, level: Math.max(0, (t.level || 1) + change) } : t));
+            };
+
+            const handleAdd = (idx = tasks.length - 1) => {
+                const newId = (Math.max(...tasks.map(t => t.id), 0) + 1);
+                const today = new Date().toISOString().split('T')[0];
+                const newTask = { id: newId, task: "New Activity", start: today, end: today, progress: 0, status: "Not Started", owner: "PM", level: 1 };
+                const newTasks = [...tasks];
+                newTasks.splice(idx + 1, 0, newTask);
+                setTasks(newTasks);
+            };
+
+            const handleDelete = (id) => setTasks(prev => prev.filter(t => t.id !== id));
+
+            const handleSave = () => {
+                const state = { tasks, owners, holidays };
+                localStorage.setItem('app_state', JSON.stringify(state));
+                // Legacy fallback for safety
+                localStorage.setItem('schedule_data', JSON.stringify(tasks)); 
+                setToast(true); setTimeout(() => setToast(false), 2000);
+            };
+
+            const handleExportPDF = () => {
+                const wasPreview = isPreview;
+                setIsPreview(true);
+                setTimeout(() => {
+                    html2pdf().set({ margin: 0.3, filename: 'Project_Schedule.pdf', image: {type:'jpeg',quality:0.98}, html2canvas: {scale:2}, jsPDF: {unit:'in',format:'letter',orientation:'landscape'} })
+                        .from(document.getElementById('schedule-content')).toPdf().get('pdf').then((pdf) => {
+                            window.open(pdf.output('bloburl'), '_blank');
+                            if(!wasPreview) setIsPreview(false);
+                        });
+                }, 100);
+            };
+
+            const handleExportJSON = () => {
+                const blob = new Blob([JSON.stringify({ tasks, owners, holidays }, null, 2)], { type: 'application/json' });
+                const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'schedule_project_data.json';
+                a.click();
+            };
+
+            const handleImport = (e) => {
+                const file = e.target.files[0];
+                if(!file) return;
+                const r = new FileReader();
+                r.onload = (evt) => {
+                    try {
+                        const json = JSON.parse(evt.target.result);
+                        if(Array.isArray(json)) setTasks(json); // Legacy
+                        else {
+                            if(json.tasks) setTasks(json.tasks);
+                            if(json.owners) setOwners(json.owners);
+                            if(json.holidays) setHolidays(json.holidays);
+                        }
+                    } catch(err){ alert("Invalid JSON"); }
+                };
+                r.readAsText(file);
+            };
+
+            const filtered = filterOwner === 'All' ? processedTasks : processedTasks.filter(t => t.owner === filterOwner);
+
+            // Filter upcoming holidays
+            const upcomingHolidays = holidays.filter(h => new Date(h.date) >= new Date(now.toDateString()));
+
+            return (
+                <div className="flex flex-col h-full bg-slate-50/50 relative">
+                    {/* Components */}
+                    {toast && <div className="fixed bottom-6 right-6 bg-emerald-600 text-white px-6 py-3 rounded-lg shadow-xl flex items-center gap-3 animate-slide-up z-[60]"><Icons.CheckCircle className="w-5 h-5"/>Saved!</div>}
+                    
+                    {/* Backdrop for menus */}
+                    {(menus.export || menus.settings) && (
+                        <div className="fixed inset-0 z-40" onClick={()=>setMenus({export:false, settings:false})}></div>
+                    )}
+                    
+                    <TeamModal isOpen={modals.team} onClose={()=>setModals({...modals,team:false})} owners={owners} setOwners={setOwners} />
+                    <HolidayModal isOpen={modals.holiday} onClose={()=>setModals({...modals,holiday:false})} holidays={holidays} setHolidays={setHolidays} />
+
+                    {/* App Bar */}
+                    <header className="glass-header px-6 py-4 flex items-center justify-between sticky top-0 z-50 shadow-md no-print">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-white/20 backdrop-blur rounded-lg flex items-center justify-center text-white shadow-lg"><Icons.Briefcase className="w-6 h-6" /></div>
+                            <div>
+                                <h1 className="text-xl font-bold text-white leading-tight">Project Scheduler</h1>
+                                <div className="flex items-center gap-2 text-xs text-blue-100 font-medium">Data Hub Optimization • <span className="font-mono">{now.toLocaleString()}</span></div>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            {/* Preview Toggle */}
+                            <button onClick={()=>setIsPreview(!isPreview)} className="btn-modern">
+                                {isPreview ? <><Icons.EyeOff className="w-4 h-4"/> Edit</> : <><Icons.Eye className="w-4 h-4"/> Preview</>}
+                            </button>
+
+                            {/* Save */}
+                            <button onClick={handleSave} className="btn-modern"><Icons.Save className="w-4 h-4"/> Save</button>
+
+                            {/* Export Dropdown */}
+                            <div className="relative">
+                                <button onClick={()=>setMenus({export:!menus.export, settings:false})} className="btn-modern">
+                                    <Icons.Download className="w-4 h-4"/> Export
+                                </button>
+                                {menus.export && (
+                                    <div className="absolute top-full right-0 mt-2 bg-white border border-slate-200 rounded-lg shadow-xl w-40 py-1 z-50 animate-slide-up text-slate-800">
+                                        <button onClick={()=>{handleExportPDF(); setMenus({export:false, settings:false})}} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors">
+                                            <Icons.FileText className="w-4 h-4 text-slate-500"/> PDF
+                                        </button>
+                                        <button onClick={()=>{handleExportJSON(); setMenus({export:false, settings:false})}} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors">
+                                            <Icons.Code className="w-4 h-4 text-slate-500"/> JSON
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Settings Dropdown */}
+                            {!isPreview && (
+                                <div className="relative">
+                                    <button onClick={()=>setMenus({settings:!menus.settings, export:false})} className="btn-modern">
+                                        <Icons.Settings className="w-4 h-4"/> Settings
+                                    </button>
+                                    {menus.settings && (
+                                        <div className="absolute top-full right-0 mt-2 bg-white border border-slate-200 rounded-lg shadow-xl w-48 py-1 z-50 animate-slide-up text-slate-800">
+                                            <button onClick={()=>{setModals({...modals, team:true}); setMenus({export:false, settings:false})}} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors">
+                                                <Icons.Users className="w-4 h-4 text-slate-500"/> Manage Team
+                                            </button>
+                                            <button onClick={()=>{setModals({...modals, holiday:true}); setMenus({export:false, settings:false})}} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors">
+                                                <Icons.Sun className="w-4 h-4 text-amber-500"/> Manage Holidays
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </header>
+
+                    {/* Main Content */}
+                    <div id="schedule-content" className="flex-1 overflow-auto bg-slate-50/50 flex flex-col">
+                        <div className="px-6 py-6 max-w-[1600px] w-full mx-auto flex-1 flex flex-col">
+                            {/* Stats */}
+                            <div className="flex flex-col md:flex-row gap-4 mb-8">
+                                <StatCard title="Duration" value={`${stats.duration} Mo`} subtext={`${stats.start.getFullYear()}-${stats.end.getFullYear()}`} icon={Icons.Calendar} />
+                                <StatCard title="Activities" value={stats.total} subtext={`${stats.completed} Done`} icon={Icons.List} />
+                                <StatCard title="Completion" value={`${Math.round((stats.completed/stats.total)*100)||0}%`} icon={Icons.CheckCircle} />
+                                <StatCard title="Attention" value={stats.atRisk} subtext="Overdue/Risk" trend={stats.atRisk>0?'bad':'good'} icon={Icons.Alert} />
+                            </div>
+
+                            {/* Toolbar */}
+                            {!isPreview && (
+                                <div className="flex flex-col lg:flex-row justify-between items-center gap-4 mb-4 no-print">
+                                    <div className="flex bg-white border border-slate-200 rounded-lg p-1 shadow-sm">
+                                        {['table','gantt','calendar'].map(v => (
+                                            <button key={v} onClick={()=>setView(v)} className={`px-4 py-1.5 text-sm font-medium rounded-md capitalize transition-all ${view===v?'bg-brand-50 text-brand-700 shadow-sm':'text-slate-500 hover:text-slate-700'}`}>{v}</button>
+                                        ))}
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <label className="cursor-pointer text-xs font-medium text-brand-600 hover:underline flex items-center gap-1">
+                                            <input type="file" accept=".json" className="hidden" onChange={handleImport} /> <Icons.Upload className="w-3 h-3" /> Import
+                                        </label>
+                                        <select value={filterOwner} onChange={e=>setFilterOwner(e.target.value)} className="bg-white border border-slate-200 text-slate-700 text-xs rounded-lg p-2 shadow-sm min-w-[140px]">
+                                            <option value="All">All Owners</option>
+                                            {Object.keys(owners).map(o=><option key={o} value={o}>{owners[o].name}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Views */}
+                            <div className={`bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden min-h-[500px] flex flex-col flex-1 ${isPreview?'border-none shadow-none':''}`}>
+                                {view === 'table' ? (
+                                    <ListView tasks={filtered} owners={owners} isPreview={isPreview} onUpdate={handleUpdate} onDelete={handleDelete} onMove={handleMove} onIndent={handleIndent} onAdd={handleAdd} />
+                                ) : view === 'gantt' ? (
+                                    <GanttView tasks={filtered} owners={owners} holidays={holidays} />
+                                ) : (
+                                    <CalendarView tasks={filtered} owners={owners} holidays={holidays} />
+                                )}
+                            </div>
+                            
+                            {/* Holiday Footer */}
+                            {upcomingHolidays.length > 0 && (
+                                <div className="mt-6 p-4 bg-white rounded-lg border border-slate-200 shadow-sm">
+                                    <h4 className="text-sm font-bold text-slate-700 mb-2 flex items-center gap-2"><Icons.Sun className="w-4 h-4 text-amber-500"/> Upcoming Holidays</h4>
+                                    <div className="flex flex-wrap gap-4">
+                                        {upcomingHolidays.slice(0, 5).map((h, i) => (
+                                            <div key={i} className="text-xs bg-slate-50 px-3 py-1.5 rounded-md border border-slate-100 text-slate-600">
+                                                <span className="font-semibold text-slate-900">{new Date(h.date).toLocaleDateString()}</span> - {h.name}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- Sub-Components ---
+
+        const ListView = ({ tasks, owners, isPreview, onUpdate, onDelete, onMove, onIndent, onAdd }) => (
+            <div className="overflow-x-auto flex-1">
+                <table className="w-full text-sm text-left">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-xs font-semibold">
+                        <tr>
+                            {!isPreview && <th className="px-4 py-3 w-16">Sort</th>}
+                            <th className="px-6 py-3 w-[35%]">Activity Name</th>
+                            <th className="px-6 py-3">Timeline</th>
+                            <th className="px-6 py-3 text-left">Owner</th>
+                            <th className="px-6 py-3 text-center">Status</th>
+                            <th className="px-6 py-3 text-center">Progress</th>
+                            {!isPreview && <th className="px-6 py-3 text-center">Actions</th>}
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                        {tasks.map((task, i) => (
+                            <tr key={task.id} className={`group hover:bg-slate-50 transition-colors ${task.isHeader ? 'bg-slate-50/60' : ''}`}>
+                                {!isPreview && (
+                                    <td className="px-4 py-3">
+                                        <div className="flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button onClick={()=>onMove(task.idx, -1)} className="hover:text-brand-600"><Icons.ChevronUp className="w-3 h-3"/></button>
+                                            <button onClick={()=>onMove(task.idx, 1)} className="hover:text-brand-600"><Icons.ChevronDown className="w-3 h-3"/></button>
+                                        </div>
+                                    </td>
+                                )}
+                                <td className="px-6 py-3">
+                                    <div className="flex items-center gap-2" style={{ paddingLeft: `${(task.level || 0) * 20}px` }}>
+                                        {task.isHeader ? <div className="w-1 h-5 bg-slate-800 rounded-full mr-2"></div> : <div className="w-1.5 h-1.5 rounded-full bg-slate-300 mr-2"></div>}
+                                        {isPreview ? (
+                                            <span className={`${task.isHeader ? 'font-bold text-slate-900 text-base' : 'font-medium text-slate-700'}`}>{task.task}</span>
+                                        ) : (
+                                            <input type="text" value={task.task} onChange={e=>onUpdate(task.id, 'task', e.target.value)} className={`bg-transparent border-none p-0 w-full focus:ring-0 ${task.isHeader ? 'font-bold text-slate-900' : ''}`} />
+                                        )}
+                                    </div>
+                                    {!isPreview && (
+                                        <div className="flex gap-2 mt-1 ml-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button onClick={()=>onIndent(task.id, -1)} title="Outdent" className="p-1 hover:bg-slate-200 rounded"><Icons.Outdent className="w-3 h-3 text-slate-500"/></button>
+                                            <button onClick={()=>onIndent(task.id, 1)} title="Indent" className="p-1 hover:bg-slate-200 rounded"><Icons.Indent className="w-3 h-3 text-slate-500"/></button>
+                                        </div>
+                                    )}
+                                    {task.warning && !isPreview && <div className="text-[10px] text-red-500 font-bold mt-1 ml-6 flex items-center gap-1"><Icons.Alert className="w-3 h-3"/> {task.warning}</div>}
+                                </td>
+                                <td className="px-6 py-3 font-mono text-xs text-slate-600">
+                                    {isPreview ? 
+                                        <span>{task.start} → {task.end}</span> : 
+                                        <div className="flex items-center gap-2">
+                                            <input type="date" value={task.start} onChange={e=>onUpdate(task.id,'start',e.target.value)} className="bg-transparent border-none p-0 w-24 text-xs" />
+                                            <span>→</span>
+                                            <input type="date" value={task.end} onChange={e=>onUpdate(task.id,'end',e.target.value)} className={`bg-transparent border-none p-0 w-24 text-xs ${task.warning ? 'text-red-600 font-bold' : ''}`} />
+                                        </div>
+                                    }
+                                </td>
+                                <td className="px-6 py-3 text-left">
+                                    {!task.isHeader && (
+                                        isPreview ? 
+                                            <div className="flex items-center justify-start gap-2"><div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold ${owners[task.owner]?.color}`}>{owners[task.owner]?.avatar}</div><span className="text-xs">{owners[task.owner]?.name}</span></div> 
+                                            : <select value={task.owner} onChange={e=>onUpdate(task.id,'owner',e.target.value)} className="text-xs bg-transparent border-none p-0 cursor-pointer">{Object.keys(owners).map(k=><option key={k} value={k}>{k}</option>)}</select>
+                                    )}
+                                </td>
+                                <td className="px-6 py-3 text-center">
+                                    {!task.isHeader && (isPreview ? <StatusBadge status={task.computedStatus} /> : <select value={task.status} onChange={e=>onUpdate(task.id,'status',e.target.value)} className="text-xs border-none bg-transparent p-0"><option value="Not Started">Not Started</option><option value="In Progress">In Progress</option><option value="Completed">Completed</option><option value="At Risk">At Risk</option></select>)}
+                                </td>
+                                <td className="px-6 py-3 text-center">
+                                    <div className="flex items-center justify-center gap-2 w-24 mx-auto relative group/progress">
+                                        <div className="flex-1 h-1.5 bg-slate-200 rounded-full overflow-hidden relative"><div className={`h-full ${task.progress===100?'bg-emerald-500':'bg-brand-500'}`} style={{width:`${task.progress}%`}}></div></div>
+                                        <span className="text-xs text-slate-500 w-8 text-right font-medium">{task.progress}%</span>
+                                        <input type="number" value={task.progress} min="0" max="100" onChange={e=>onUpdate(task.id,'progress',parseInt(e.target.value))} className={`absolute inset-0 w-full opacity-0 cursor-pointer ${isPreview ? 'hidden' : ''}`} title="Edit Percentage"/>
+                                    </div>
+                                </td>
+                                {!isPreview && (
+                                    <td className="px-6 py-3 text-center">
+                                        <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                                            <button onClick={()=>onAdd(task.idx)} title="Insert Below" className="p-1.5 text-brand-600 hover:bg-brand-50 rounded"><Icons.Plus className="w-3.5 h-3.5"/></button>
+                                            <button onClick={()=>onDelete(task.id)} title="Delete" className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded"><Icons.Trash className="w-3.5 h-3.5"/></button>
+                                        </div>
+                                    </td>
+                                )}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+                {!isPreview && <div className="p-4 border-t border-slate-200"><button onClick={()=>onAdd()} className="flex items-center gap-2 text-sm font-bold text-brand-600 hover:bg-brand-50 px-3 py-2 rounded-lg transition-colors"><Icons.Plus className="w-4 h-4"/> Add Activity</button></div>}
+            </div>
+        );
+
+        const GanttView = ({ tasks, owners, holidays }) => {
+            const { months, processed, todayPos } = useMemo(() => {
+                if(!tasks.length) return { months:[], processed:[], todayPos: 0 };
+                const sorted = [...tasks].sort((a,b) => new Date(a.start) - new Date(b.start));
+                const min = new Date(sorted[0].start); min.setMonth(min.getMonth()-1);
+                const max = new Date(sorted.reduce((m,t)=>new Date(t.end)>m?new Date(t.end):m, new Date())); max.setMonth(max.getMonth()+2);
+                
+                const totalDays = (max - min) / (86400000);
+                const monthsArr = [];
+                let curr = new Date(min);
+                while(curr < max) { monthsArr.push(new Date(curr)); curr.setMonth(curr.getMonth()+1); }
+
+                const now = new Date();
+                const todayPos = ((now - min) / 86400000 / totalDays) * 100;
+
+                return {
+                    months: monthsArr,
+                    todayPos: todayPos,
+                    processed: tasks.map(t => ({
+                        ...t,
+                        left: ((new Date(t.start)-min)/86400000/totalDays)*100,
+                        width: Math.max(((new Date(t.end)-new Date(t.start))/86400000/totalDays)*100, 0.5)
+                    }))
+                };
+            }, [tasks]);
+
+            return (
+                <div className="flex flex-col h-full bg-white overflow-hidden relative">
+                    <div className="flex border-b border-slate-200 bg-slate-50 sticky top-0 z-30">
+                        <div className="w-[300px] flex-shrink-0 border-r border-slate-200 p-3 text-xs font-bold text-slate-500 uppercase">Activity</div>
+                        <div className="flex-1 relative h-10 flex overflow-hidden">
+                            {months.map((m,i) => <div key={i} className="flex-1 border-r border-slate-200 p-2 text-xs font-medium text-slate-400 whitespace-nowrap min-w-[100px]">{m.toLocaleDateString('en-US',{month:'short',year:'2-digit'})}</div>)}
+                        </div>
+                    </div>
+                    <div className="flex-1 overflow-auto gantt-scroll relative">
+                        <div className="absolute inset-0 flex ml-[300px] pointer-events-none h-full">
+                            {/* Today Line */}
+                            {todayPos >= 0 && todayPos <= 100 && (
+                                <div className="absolute top-0 bottom-0 w-px border-l-2 border-red-400 border-dashed z-40" style={{left: `${todayPos}%`}}>
+                                    <div className="absolute -top-1 -left-1 w-2 h-2 rounded-full bg-red-500"></div>
+                                </div>
+                            )}
+                            {months.map((_,i) => <div key={i} className="flex-1 border-r border-slate-100 h-full"></div>)}
+                        </div>
+                        {processed.map(t => (
+                            <div key={t.id} className="flex border-b border-slate-50 hover:bg-slate-50 min-h-[48px] items-center relative z-10">
+                                <div className="w-[300px] flex-shrink-0 border-r border-slate-200 px-4 py-2 text-sm bg-white sticky left-0 z-20 whitespace-normal leading-tight">
+                                    <span className={t.isHeader ? "font-bold text-slate-800" : "text-slate-600 pl-4"}>{t.task}</span>
+                                </div>
+                                <div className="flex-1 relative h-full py-3">
+                                    <div className={`absolute h-5 rounded-full shadow-sm flex items-center justify-center text-[10px] text-white font-bold overflow-hidden ${t.status==='Completed'?'bg-emerald-400':t.computedStatus==='Overdue'?'bg-red-500':owners[t.owner]?.color.split(' ')[0].replace('100','500') || 'bg-slate-400'}`} style={{left:`${t.left}%`, width:`${t.width}%`}}>
+                                        <div className="absolute left-0 top-0 h-full bg-white/20 rounded-full" style={{width:`${t.progress}%`}}></div>
+                                        <span className="relative z-10 drop-shadow-md">{t.progress}%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const CalendarView = ({ tasks, owners, holidays }) => {
+            const [currentDate, setCurrentDate] = useState(new Date());
+            const [mode, setMode] = useState('month'); // 'month' | 'year'
+
+            const daysInMonth = (y, m) => new Date(y, m + 1, 0).getDate();
+            
+            const isWeekend = (d, m, y) => {
+                const date = new Date(y, m, d);
+                const day = date.getDay();
+                return day === 0 || day === 6;
+            };
+
+            const isToday = (d, m, y) => {
+                const now = new Date();
+                return d === now.getDate() && m === now.getMonth() && y === now.getFullYear();
+            }
+
+            const getTasksForDay = (d, m, y) => {
+                const date = new Date(y, m, d);
+                return tasks.filter(t => {
+                    const start = new Date(t.start); start.setHours(0,0,0,0);
+                    const end = new Date(t.end); end.setHours(23,59,59,999);
+                    return date >= start && date <= end;
+                });
+            };
+
+            const changeMonth = (delta) => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + delta, 1));
+            const changeYear = (delta) => setCurrentDate(new Date(currentDate.getFullYear() + delta, currentDate.getMonth(), 1));
+
+            const MonthGrid = ({ year, month, mini }) => {
+                const firstDay = new Date(year, month, 1).getDay();
+                const days = Array.from({ length: daysInMonth(year, month) }, (_, i) => i + 1);
+                
+                return (
+                    <div className={`grid grid-cols-7 ${mini ? 'text-[8px] gap-0.5' : 'flex-1 border-t border-l border-slate-200 bg-slate-50'}`}>
+                         {!mini && ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => <div key={d} className={`p-2 text-center text-xs font-bold uppercase border-b border-r border-slate-200 ${d==='Sun'||d==='Sat'?'text-red-500':'text-slate-500'}`}>{d}</div>)}
+                         {mini && ['S','M','T','W','T','F','S'].map(d=><div key={d} className="text-center text-[8px] text-slate-400 font-bold">{d}</div>)}
+                         
+                         {Array(firstDay).fill(null).map((_, i) => <div key={`empty-${i}`} className={mini ? '' : 'bg-slate-50 border-b border-r border-slate-200'}></div>)}
+                         
+                         {days.map(d => {
+                            const weekend = isWeekend(d, month, year);
+                            const dateStr = new Date(year, month, d).toISOString().split('T')[0];
+                            const holiday = holidays.find(h => h.date === dateStr);
+                            const dayTasks = getTasksForDay(d, month, year);
+                            const hasTask = dayTasks.length > 0;
+                            const today = isToday(d, month, year);
+                            
+                            if (mini) {
+                                // Updated mini grid colors for pastel look
+                                let bgClass = 'bg-slate-50 text-slate-400';
+                                if (weekend) bgClass = 'bg-rose-50 text-red-400 font-bold'; // Weekend red
+                                if (hasTask) bgClass = 'bg-blue-100 text-blue-600 font-bold';
+                                if (holiday) bgClass = 'bg-amber-100 text-amber-600 font-bold';
+                                if (today) bgClass = 'ring-1 ring-red-500 font-bold';
+
+                                return (
+                                    <div key={d} className={`aspect-square flex items-center justify-center rounded-sm ${bgClass}`}>
+                                        {d}
+                                    </div>
+                                )
+                            }
+
+                            return (
+                                <div key={d} className={`min-h-[100px] border-b border-r border-slate-200 p-1 relative ${weekend || holiday ? 'bg-red-50/50' : 'bg-white'}`}>
+                                    {today && <div className="absolute top-0 bottom-0 left-0 w-1 bg-red-500"></div>}
+                                    <div className={`text-xs font-bold mb-1 flex justify-between ${weekend || holiday ? 'text-red-600' : 'text-slate-700'}`}>
+                                        <span className={today ? "bg-red-500 text-white px-1.5 rounded-full" : ""}>{d}</span>
+                                        {holiday && <div className="flex items-center gap-1"><span className="text-[9px] font-normal truncate max-w-[60px]">{holiday.name}</span><Icons.Sun className="w-3 h-3 text-red-500"/></div>}
+                                    </div>
+                                    <div className="space-y-1">
+                                        {dayTasks.map(t => (
+                                            <div key={t.id} className={`text-[10px] px-1.5 py-0.5 rounded truncate border ${t.isHeader ? 'bg-slate-800 text-white' : 'bg-brand-50 text-brand-700 border-brand-100'}`}>
+                                                {t.task}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )
+            };
+
+            return (
+                <div className="flex flex-col h-full bg-white">
+                    <div className="flex items-center justify-between p-4 border-b border-slate-200">
+                        <div className="flex items-center gap-2">
+                            <button onClick={()=> mode==='month' ? changeMonth(-1) : changeYear(-1)} className="p-1 hover:bg-slate-100 rounded"><Icons.ChevronLeft className="w-5 h-5"/></button>
+                            <h2 className="text-lg font-bold text-slate-800 w-48 text-center">{mode === 'month' ? currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : currentDate.getFullYear()}</h2>
+                            <button onClick={()=> mode==='month' ? changeMonth(1) : changeYear(1)} className="p-1 hover:bg-slate-100 rounded"><Icons.ChevronRight className="w-5 h-5"/></button>
+                        </div>
+                        <div className="flex bg-slate-100 p-1 rounded-lg">
+                            <button onClick={()=>setMode('month')} className={`px-3 py-1 text-xs font-bold rounded ${mode==='month' ? 'bg-white shadow-sm' : 'text-slate-500'}`}>Month</button>
+                            <button onClick={()=>setMode('year')} className={`px-3 py-1 text-xs font-bold rounded ${mode==='year' ? 'bg-white shadow-sm' : 'text-slate-500'}`}>Year</button>
+                        </div>
+                    </div>
+                    
+                    <div className="flex-1 overflow-auto">
+                        {mode === 'month' ? (
+                            <MonthGrid year={currentDate.getFullYear()} month={currentDate.getMonth()} />
+                        ) : (
+                            <div className="grid grid-cols-3 gap-4 p-4">
+                                {Array.from({length: 12}, (_, i) => (
+                                    <div key={i} className="border border-slate-200 rounded-lg p-2">
+                                        <div className="text-center font-bold text-sm mb-2">{new Date(currentDate.getFullYear(), i).toLocaleString('default', { month: 'long' })}</div>
+                                        <MonthGrid year={currentDate.getFullYear()} month={i} mini={true} />
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const StatusBadge = ({ status }) => {
+            const styles = {
+                'Completed': 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                'In Progress': 'bg-blue-50 text-blue-700 border-blue-200',
+                'At Risk': 'bg-red-50 text-red-700 border-red-200',
+                'Overdue': 'bg-red-100 text-red-800 border-red-300 font-bold',
+                'Not Started': 'bg-slate-100 text-slate-600 border-slate-200'
+            };
+            return <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-medium border w-24 justify-center ${styles[status]||styles['Not Started']}`}>{status}</span>;
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
