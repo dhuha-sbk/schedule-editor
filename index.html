@@ -17,6 +17,9 @@
     
     <!-- HTML2PDF for PDF Export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <!-- HTML2Canvas for High-Res Image Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -119,22 +122,29 @@
             Outdent: (p) => <Icon {...p}><polyline points="3 6 3 18"/><line x1="21" y1="6" x2="11" y2="6"/><line x1="21" y1="12" x2="11" y2="12"/><line x1="21" y1="18" x2="11" y2="18"/><polyline points="7 12 11 16 11 8"/></Icon>,
             Sun: (p) => <Icon {...p}><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></Icon>,
             Settings: (p) => <Icon {...p}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></Icon>,
-            Code: (p) => <Icon {...p}><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></Icon>
+            Code: (p) => <Icon {...p}><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></Icon>,
+            Image: (p) => <Icon {...p}><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></Icon>,
+            Html: (p) => <Icon {...p}><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></Icon>
         };
 
         // --- Data & Constants ---
         const INITIAL_DATA = [
-            { "id": 1, "task": "PHASE 1: Phase Design Study (PDS)", "start": "2025-01-01", "end": "2025-03-31", "progress": 100, "status": "Completed", "owner": "PM", "level": 0 },
-            { "id": 2, "task": "Deliverable: Mockup Design", "start": "2025-01-15", "end": "2025-02-28", "progress": 100, "status": "Completed", "owner": "Dev", "level": 1 },
-            { "id": 3, "task": "Deliverable: PDS Presentation", "start": "2025-03-01", "end": "2025-03-31", "progress": 100, "status": "Completed", "owner": "PM", "level": 1 },
-            { "id": 4, "task": "PHASE 2: Critical Design Review (CDR)", "start": "2025-04-01", "end": "2025-05-30", "progress": 80, "status": "In Progress", "owner": "PM", "level": 0 },
-            { "id": 5, "task": "Technical Development Plan & Refinement", "start": "2025-04-01", "end": "2025-05-15", "progress": 60, "status": "In Progress", "owner": "PM", "level": 1 },
-            { "id": 6, "task": "Hardware Resources Analysis", "start": "2025-04-15", "end": "2025-05-30", "progress": 40, "status": "In Progress", "owner": "Dev", "level": 1 },
-            { "id": 7, "task": "System Deployment Strategy", "start": "2025-05-01", "end": "2025-06-15", "progress": 30, "status": "In Progress", "owner": "Dev", "level": 1 },
-            { "id": 8, "task": "Implement Existing Data (V1)", "start": "2025-05-01", "end": "2025-08-31", "progress": 20, "status": "In Progress", "owner": "Dev", "level": 1 },
-            { "id": 10, "task": "PHASE 3: Implement Real Data", "start": "2026-01-01", "end": "2026-05-31", "progress": 0, "status": "Not Started", "owner": "Data Services", "level": 0 },
-            { "id": 14, "task": "PHASE 4: Site Acceptance Test (SAT)", "start": "2027-03-01", "end": "2027-04-30", "progress": 0, "status": "Not Started", "owner": "PM", "level": 0 },
-            { "id": 17, "task": "Technical Support (Year 1)", "start": "2028-01-01", "end": "2028-12-31", "progress": 0, "status": "Not Started", "owner": "Dev", "level": 0 }
+            { "id": 1, "task": "PHASE 1: Design & Review", "start": "2026-01-01", "end": "2026-03-31", "progress": 0, "status": "Not Started", "owner": "PM", "level": 0 },
+            { "id": 2, "task": "Detailed Design Review (DDR)", "start": "2026-01-01", "end": "2026-01-31", "progress": 0, "status": "Not Started", "owner": "PM", "level": 1 },
+            { "id": 3, "task": "Deliverable: Mockup Design Update", "start": "2026-02-01", "end": "2026-02-28", "progress": 0, "status": "Not Started", "owner": "Dev", "level": 1 },
+            { "id": 4, "task": "Technical Development Plan Refinement", "start": "2026-03-01", "end": "2026-03-31", "progress": 0, "status": "Not Started", "owner": "PM", "level": 1 },
+            { "id": 5, "task": "PHASE 2: Development & Implementation", "start": "2026-04-01", "end": "2026-10-31", "progress": 0, "status": "Not Started", "owner": "Dev", "level": 0 },
+            { "id": 6, "task": "Hardware Resources Analysis & Acquisition", "start": "2026-04-01", "end": "2026-05-30", "progress": 0, "status": "Not Started", "owner": "Dev", "level": 1 },
+            { "id": 7, "task": "Data Ingestion & Handler Development", "start": "2026-05-01", "end": "2026-08-31", "progress": 0, "status": "Not Started", "owner": "Data Services", "level": 1 },
+            { "id": 8, "task": "Web Dashboard Implementation (V1)", "start": "2026-06-01", "end": "2026-09-30", "progress": 0, "status": "Not Started", "owner": "Dev", "level": 1 },
+            { "id": 9, "task": "Internal Testing & Staging", "start": "2026-10-01", "end": "2026-10-31", "progress": 0, "status": "Not Started", "owner": "Dev", "level": 1 },
+            { "id": 10, "task": "PHASE 3: SAT 1 (Site Acceptance Test 1)", "start": "2026-11-01", "end": "2026-11-30", "progress": 0, "status": "Not Started", "owner": "PM", "level": 0 },
+            { "id": 11, "task": "SAT 1 Execution & Validation", "start": "2026-11-01", "end": "2026-11-15", "progress": 0, "status": "Not Started", "owner": "PM", "level": 1 },
+            { "id": 12, "task": "SAT 1 Review & Bug Fixing", "start": "2026-11-16", "end": "2026-11-30", "progress": 0, "status": "Not Started", "owner": "Dev", "level": 1 },
+            { "id": 13, "task": "PHASE 4: Final Data Integration & SAT 2", "start": "2027-01-01", "end": "2027-06-30", "progress": 0, "status": "Not Started", "owner": "PM", "level": 0 },
+            { "id": 14, "task": "Real Data Integration (Full Stream)", "start": "2027-01-01", "end": "2027-03-31", "progress": 0, "status": "Not Started", "owner": "Data Services", "level": 1 },
+            { "id": 15, "task": "SAT 2 (Site Acceptance Test 2)", "start": "2027-04-01", "end": "2027-04-30", "progress": 0, "status": "Not Started", "owner": "PM", "level": 1 },
+            { "id": 16, "task": "Final Handover & Documentation", "start": "2027-05-01", "end": "2027-06-30", "progress": 0, "status": "Not Started", "owner": "PM", "level": 1 }
         ];
 
         const INITIAL_OWNERS = {
@@ -159,8 +169,11 @@
             </div>
         );
 
+        // --- Utils ---
+        const pad = n => n < 10 ? '0'+n : n;
+        const toLocalDateStr = (date) => `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`;
+
         // --- Modals ---
-        
         const TeamModal = ({ isOpen, onClose, owners, setOwners }) => {
             const [newId, setNewId] = useState("");
             const [newName, setNewName] = useState("");
@@ -222,7 +235,7 @@
             const addHoliday = (d) => {
                  if(d && !holidays.find(h => h.date === d)) {
                      const holidayName = name || "Holiday";
-                     setHolidays([...holidays, { date: d, name: holidayName }].sort((a,b) => new Date(a.date) - new Date(b.date))); 
+                     setHolidays([...holidays, { date: d, name: holidayName }].sort((a,b) => new Date(a.date+"T00:00:00") - new Date(b.date+"T00:00:00"))); 
                  }
             };
             const removeHoliday = (d) => setHolidays(holidays.filter(h => h.date !== d));
@@ -233,11 +246,13 @@
             const days = Array.from({ length: daysInMonth(currentMonth.getFullYear(), currentMonth.getMonth()) }, (_, i) => i + 1);
             
             const handleDayClick = (day) => {
-                const dateStr = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day).toISOString().split('T')[0];
+                const clickDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+                const dateStr = toLocalDateStr(clickDate);
+                
                 if(holidays.find(h => h.date === dateStr)) removeHoliday(dateStr);
                 else {
                     const holidayName = name || "Holiday";
-                    setHolidays([...holidays, { date: dateStr, name: holidayName }].sort((a,b) => new Date(a.date) - new Date(b.date)));
+                    setHolidays([...holidays, { date: dateStr, name: holidayName }].sort((a,b) => new Date(a.date+"T00:00:00") - new Date(b.date+"T00:00:00")));
                 }
             };
 
@@ -251,7 +266,6 @@
                             <button onClick={onClose}><Icons.X className="w-5 h-5 text-slate-400" /></button>
                         </div>
                         <div className="p-6 flex-1 overflow-y-auto">
-                            {/* Manual Input */}
                              <div className="flex gap-2 mb-2">
                                 <input type="text" placeholder="Holiday Name" value={name} onChange={e=>setName(e.target.value)} className="flex-1 text-sm rounded-md border-slate-200" />
                             </div>
@@ -260,7 +274,6 @@
                                 <button onClick={()=> {if(date) addHoliday(date); setDate(""); setName("");}} className="bg-brand-600 text-white px-3 py-2 rounded-md font-bold text-sm"><Icons.Plus className="w-4 h-4"/></button>
                             </div>
                             
-                            {/* Mini Calendar */}
                             <div className="border border-slate-200 rounded-lg p-3 mb-6">
                                 <div className="flex justify-between items-center mb-2">
                                     <button onClick={()=>changeMonth(-1)} className="p-1 hover:bg-slate-100 rounded"><Icons.ChevronLeft className="w-4 h-4"/></button>
@@ -273,7 +286,7 @@
                                 <div className="grid grid-cols-7 text-center gap-1">
                                      {Array(firstDay).fill(null).map((_, i) => <div key={`e-${i}`}></div>)}
                                      {days.map(d => {
-                                         const dateStr = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), d).toISOString().split('T')[0];
+                                         const dateStr = toLocalDateStr(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), d));
                                          const isHol = holidays.find(h => h.date === dateStr);
                                          return (
                                              <button key={d} onClick={()=>handleDayClick(d)} className={`w-8 h-8 rounded-full flex items-center justify-center text-xs transition-all ${isHol ? 'bg-red-500 text-white font-bold' : 'hover:bg-slate-100 text-slate-700'}`}>
@@ -289,7 +302,7 @@
                                 {holidays.length === 0 && <p className="text-sm text-slate-400 text-center italic">No holidays defined.</p>}
                                 {holidays.map(h => (
                                     <div key={h.date} className="flex justify-between items-center p-2 bg-red-50 text-red-700 rounded-md text-sm border border-red-100">
-                                        <span>{new Date(h.date).toLocaleDateString()} - <b>{h.name}</b></span>
+                                        <span>{new Date(h.date+"T00:00:00").toLocaleDateString()} - <b>{h.name}</b></span>
                                         <button onClick={()=>removeHoliday(h.date)}><Icons.Trash className="w-3.5 h-3.5 opacity-50 hover:opacity-100"/></button>
                                     </div>
                                 ))}
@@ -302,29 +315,31 @@
 
         // --- Main Application ---
         const App = () => {
-            // Setup & Load
             const loadState = (key, def) => {
                 const s = localStorage.getItem(key);
                 return s ? JSON.parse(s) : def;
             };
 
+            const [projectName, setProjectName] = useState(() => {
+                const unified = localStorage.getItem('app_state_v2');
+                return unified && JSON.parse(unified).projectName ? JSON.parse(unified).projectName : 'Data Hub Optimization';
+            });
+
             const [tasks, setTasks] = useState(() => {
-                const legacy = localStorage.getItem('schedule_data'); // Legacy array check
-                const unified = localStorage.getItem('app_state'); // New unified object
+                const unified = localStorage.getItem('app_state_v2'); 
                 if (unified) return JSON.parse(unified).tasks;
-                if (legacy) return JSON.parse(legacy);
                 return INITIAL_DATA;
             });
             const [owners, setOwners] = useState(() => {
-                const unified = localStorage.getItem('app_state');
-                return unified ? JSON.parse(unified).owners : (loadState('schedule_owners', INITIAL_OWNERS));
+                const unified = localStorage.getItem('app_state_v2');
+                return unified ? JSON.parse(unified).owners : INITIAL_OWNERS;
             });
             const [holidays, setHolidays] = useState(() => {
-                const unified = localStorage.getItem('app_state');
+                const unified = localStorage.getItem('app_state_v2');
                 return unified ? JSON.parse(unified).holidays : [];
             });
 
-            const [view, setView] = useState('table'); 
+            const [view, setView] = useState('gantt'); 
             const [isPreview, setIsPreview] = useState(false);
             const [filterOwner, setFilterOwner] = useState('All');
             const [now, setNow] = useState(new Date());
@@ -332,19 +347,26 @@
             const [menus, setMenus] = useState({ export: false, settings: false });
             const [toast, setToast] = useState(false);
 
-            useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t); }, []);
+            useEffect(() => { 
+                const t = setInterval(() => setNow(new Date()), 1000); 
+                return () => clearInterval(t); 
+            }, []);
 
-            // Computed
+            useEffect(() => {
+                document.title = `${projectName} - Schedule Editor`;
+            }, [projectName]);
+
             const { stats, processedTasks } = useMemo(() => {
                 let currentPhaseEnd = null;
                 const processed = tasks.map((t, idx) => {
                     const isHeader = t.level === 0;
-                    const endDate = new Date(t.end);
+                    const endDate = new Date(t.end + "T00:00:00");
                     if (isHeader) currentPhaseEnd = endDate;
                     
                     let computedStatus = t.status;
-                    // Auto-calculate overdue if not completed/100% and date passed
-                    if (t.status !== 'Completed' && t.progress < 100 && endDate < new Date(now.toDateString())) {
+                    const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+                    if (t.status !== 'Completed' && t.progress < 100 && endDate < todayMidnight) {
                         computedStatus = 'Overdue';
                     }
 
@@ -355,35 +377,29 @@
                     return { ...t, computedStatus, warning, isHeader, idx };
                 });
                 
-                const dates = processed.flatMap(t => [new Date(t.start), new Date(t.end)]);
+                const dates = processed.flatMap(t => [new Date(t.start + "T00:00:00"), new Date(t.end + "T00:00:00")]);
                 const start = dates.length ? new Date(Math.min(...dates)) : new Date();
                 const end = dates.length ? new Date(Math.max(...dates)) : new Date();
-                const duration = Math.max(0, Math.round((end - start)/(1000*60*60*24*30)));
+                
+                // Use 30.44 days per month for a more accurate dynamic calendar duration
+                const duration = Math.max(0, Math.round((end - start)/(1000*60*60*24*30.44)));
 
                 const total = processed.length;
                 const completed = processed.filter(t => t.status === 'Completed' || t.progress === 100).length;
                 const atRisk = processed.filter(t => t.status === 'At Risk' || t.computedStatus === 'Overdue').length;
                 
                 return { 
-                    stats: { 
-                        total, 
-                        completed,
-                        atRisk,
-                        duration,
-                        start, end
-                    }, 
+                    stats: { total, completed, atRisk, duration, start, end }, 
                     processedTasks: processed 
                 };
             }, [tasks, now]);
 
-            // Handlers
             const handleUpdate = (id, field, value) => {
                 setTasks(prev => prev.map(t => {
                     if (t.id !== id) return t;
                     const u = { ...t, [field]: value };
                     
-                    // Logic adjustments
-                    if (field === 'start' && new Date(value) > new Date(u.end)) u.end = value;
+                    if (field === 'start' && new Date(value+"T00:00:00") > new Date(u.end+"T00:00:00")) u.end = value;
                     if (field === 'progress' && value === 100) u.status = 'Completed';
                     if (field === 'status' && value === 'Completed') u.progress = 100;
                     if (field === 'progress' && value < 100 && u.status === 'Completed') u.status = 'In Progress';
@@ -407,7 +423,7 @@
 
             const handleAdd = (idx = tasks.length - 1) => {
                 const newId = (Math.max(...tasks.map(t => t.id), 0) + 1);
-                const today = new Date().toISOString().split('T')[0];
+                const today = toLocalDateStr(new Date());
                 const newTask = { id: newId, task: "New Activity", start: today, end: today, progress: 0, status: "Not Started", owner: "PM", level: 1 };
                 const newTasks = [...tasks];
                 newTasks.splice(idx + 1, 0, newTask);
@@ -417,43 +433,139 @@
             const handleDelete = (id) => setTasks(prev => prev.filter(t => t.id !== id));
 
             const handleSave = () => {
-                const state = { tasks, owners, holidays };
-                localStorage.setItem('app_state', JSON.stringify(state));
-                // Legacy fallback for safety
-                localStorage.setItem('schedule_data', JSON.stringify(tasks)); 
+                const state = { tasks, owners, holidays, projectName };
+                localStorage.setItem('app_state_v2', JSON.stringify(state));
                 setToast(true); setTimeout(() => setToast(false), 2000);
             };
 
+            // OPTIMIZED PDF EXPORT (A3 Landscape Fit)
             const handleExportPDF = () => {
                 const wasPreview = isPreview;
                 setIsPreview(true);
                 setTimeout(() => {
-                    html2pdf().set({ margin: 0.3, filename: 'Project_Schedule.pdf', image: {type:'jpeg',quality:0.98}, html2canvas: {scale:2}, jsPDF: {unit:'in',format:'letter',orientation:'landscape'} })
-                        .from(document.getElementById('schedule-content')).toPdf().get('pdf').then((pdf) => {
-                            window.open(pdf.output('bloburl'), '_blank');
-                            if(!wasPreview) setIsPreview(false);
-                        });
-                }, 100);
+                    const element = document.getElementById('schedule-content');
+                    const oldOverflow = element.style.overflow;
+                    element.style.overflow = 'visible'; // Unconstrain for full capture
+
+                    // Using A3 format. Due to our dynamic 1.6 aspect ratio on the Gantt chart,
+                    // when html2pdf scales this element's width to fit A3 Landscape (420mm),
+                    // the resulting scaled height will easily fit perfectly within A3's 297mm height.
+                    const opt = {
+                        margin: 0.3,
+                        filename: `${projectName.replace(/\s+/g, '_')}_A3.pdf`,
+                        image: { type: 'jpeg', quality: 1 },
+                        html2canvas: { 
+                            scale: 2, 
+                            useCORS: true,
+                            width: element.scrollWidth,
+                            height: element.scrollHeight,
+                            windowWidth: element.scrollWidth,
+                            windowHeight: element.scrollHeight
+                        },
+                        jsPDF: { 
+                            unit: 'in', 
+                            format: 'a3', // True A3 standard format
+                            orientation: 'landscape' // Horizontally optimized
+                        }
+                    };
+
+                    html2pdf().set(opt).from(element).save().then(() => {
+                        element.style.overflow = oldOverflow;
+                        if(!wasPreview) setIsPreview(false);
+                    });
+                }, 300);
+            };
+
+            const handleExportImage = () => {
+                const wasPreview = isPreview;
+                setIsPreview(true);
+                setTimeout(() => {
+                    const element = document.getElementById('schedule-content');
+                    const oldOverflow = element.style.overflow;
+                    element.style.overflow = 'visible'; 
+                    
+                    html2canvas(element, {
+                        scale: 3,
+                        useCORS: true,
+                        width: element.scrollWidth,
+                        height: element.scrollHeight,
+                        windowWidth: element.scrollWidth,
+                        windowHeight: element.scrollHeight
+                    }).then(canvas => {
+                        const link = document.createElement('a');
+                        link.download = `${projectName.replace(/\s+/g, '_')}.png`;
+                        link.href = canvas.toDataURL('image/png');
+                        link.click();
+                        
+                        element.style.overflow = oldOverflow;
+                        if(!wasPreview) setIsPreview(false);
+                    });
+                }, 300);
+            };
+
+            const handleExportHTML = () => {
+                const wasPreview = isPreview;
+                setIsPreview(true);
+                setTimeout(() => {
+                    const element = document.getElementById('schedule-content');
+                    const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]')).map(s => s.outerHTML).join('\n');
+                    
+                    const htmlContent = `
+                    <!DOCTYPE html>
+                    <html lang="en">
+                    <head>
+                        <meta charset="UTF-8">
+                        <title>${projectName} - Static Export</title>
+                        <script src="https://cdn.tailwindcss.com"><\/script>
+                        ${styles}
+                        <style>
+                            body { background: #f8fafc; padding: 20px; font-family: 'Inter', sans-serif; }
+                            #schedule-content { overflow: visible !important; height: auto !important; max-width: none !important; }
+                            /* Disable edit features visually in static export */
+                            input, select, button { pointer-events: none; }
+                        </style>
+                    </head>
+                    <body>
+                        <div id="schedule-content" class="bg-slate-50/50 flex flex-col rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                            ${element.innerHTML}
+                        </div>
+                    </body>
+                    </html>`;
+                    
+                    const blob = new Blob([htmlContent], { type: 'text/html' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `${projectName.replace(/\s+/g, '_')}.html`;
+                    link.click();
+                    
+                    if(!wasPreview) setIsPreview(false);
+                }, 300);
             };
 
             const handleExportJSON = () => {
-                const blob = new Blob([JSON.stringify({ tasks, owners, holidays }, null, 2)], { type: 'application/json' });
-                const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'schedule_project_data.json';
+                const blob = new Blob([JSON.stringify({ tasks, owners, holidays, projectName }, null, 2)], { type: 'application/json' });
+                const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${projectName.replace(/\s+/g, '_')}_data.json`;
                 a.click();
             };
 
             const handleImport = (e) => {
                 const file = e.target.files[0];
                 if(!file) return;
+
+                // Dynamically update the project name based on the uploaded file's name
+                const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
+                setProjectName(nameWithoutExt);
+
                 const r = new FileReader();
                 r.onload = (evt) => {
                     try {
                         const json = JSON.parse(evt.target.result);
-                        if(Array.isArray(json)) setTasks(json); // Legacy
+                        if(Array.isArray(json)) setTasks(json);
                         else {
                             if(json.tasks) setTasks(json.tasks);
                             if(json.owners) setOwners(json.owners);
                             if(json.holidays) setHolidays(json.holidays);
+                            if(json.projectName) setProjectName(json.projectName);
                         }
                     } catch(err){ alert("Invalid JSON"); }
                 };
@@ -462,15 +574,13 @@
 
             const filtered = filterOwner === 'All' ? processedTasks : processedTasks.filter(t => t.owner === filterOwner);
 
-            // Filter upcoming holidays
-            const upcomingHolidays = holidays.filter(h => new Date(h.date) >= new Date(now.toDateString()));
+            const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const upcomingHolidays = holidays.filter(h => new Date(h.date+"T00:00:00") >= todayMidnight);
 
             return (
                 <div className="flex flex-col h-full bg-slate-50/50 relative">
-                    {/* Components */}
                     {toast && <div className="fixed bottom-6 right-6 bg-emerald-600 text-white px-6 py-3 rounded-lg shadow-xl flex items-center gap-3 animate-slide-up z-[60]"><Icons.CheckCircle className="w-5 h-5"/>Saved!</div>}
                     
-                    {/* Backdrop for menus */}
                     {(menus.export || menus.settings) && (
                         <div className="fixed inset-0 z-40" onClick={()=>setMenus({export:false, settings:false})}></div>
                     )}
@@ -478,42 +588,43 @@
                     <TeamModal isOpen={modals.team} onClose={()=>setModals({...modals,team:false})} owners={owners} setOwners={setOwners} />
                     <HolidayModal isOpen={modals.holiday} onClose={()=>setModals({...modals,holiday:false})} holidays={holidays} setHolidays={setHolidays} />
 
-                    {/* App Bar */}
                     <header className="glass-header px-6 py-4 flex items-center justify-between sticky top-0 z-50 shadow-md no-print">
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 bg-white/20 backdrop-blur rounded-lg flex items-center justify-center text-white shadow-lg"><Icons.Briefcase className="w-6 h-6" /></div>
                             <div>
                                 <h1 className="text-xl font-bold text-white leading-tight">Project Scheduler</h1>
-                                <div className="flex items-center gap-2 text-xs text-blue-100 font-medium">Data Hub Optimization • <span className="font-mono">{now.toLocaleString()}</span></div>
+                                <div className="flex items-center gap-2 text-xs text-blue-100 font-medium">{projectName} • <span className="font-mono">{now.toLocaleString()}</span></div>
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
-                            {/* Preview Toggle */}
                             <button onClick={()=>setIsPreview(!isPreview)} className="btn-modern">
                                 {isPreview ? <><Icons.EyeOff className="w-4 h-4"/> Edit</> : <><Icons.Eye className="w-4 h-4"/> Preview</>}
                             </button>
 
-                            {/* Save */}
                             <button onClick={handleSave} className="btn-modern"><Icons.Save className="w-4 h-4"/> Save</button>
 
-                            {/* Export Dropdown */}
                             <div className="relative">
                                 <button onClick={()=>setMenus({export:!menus.export, settings:false})} className="btn-modern">
                                     <Icons.Download className="w-4 h-4"/> Export
                                 </button>
                                 {menus.export && (
-                                    <div className="absolute top-full right-0 mt-2 bg-white border border-slate-200 rounded-lg shadow-xl w-40 py-1 z-50 animate-slide-up text-slate-800">
+                                    <div className="absolute top-full right-0 mt-2 bg-white border border-slate-200 rounded-lg shadow-xl w-48 py-1 z-50 animate-slide-up text-slate-800">
                                         <button onClick={()=>{handleExportPDF(); setMenus({export:false, settings:false})}} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors">
-                                            <Icons.FileText className="w-4 h-4 text-slate-500"/> PDF
+                                            <Icons.FileText className="w-4 h-4 text-slate-500"/> Export PDF (A3 Landscape)
+                                        </button>
+                                        <button onClick={()=>{handleExportImage(); setMenus({export:false, settings:false})}} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors">
+                                            <Icons.Image className="w-4 h-4 text-slate-500"/> Export High-Res PNG
+                                        </button>
+                                        <button onClick={()=>{handleExportHTML(); setMenus({export:false, settings:false})}} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors border-t border-slate-100 mt-1 pt-1">
+                                            <Icons.Html className="w-4 h-4 text-slate-500"/> Export HTML Snapshot
                                         </button>
                                         <button onClick={()=>{handleExportJSON(); setMenus({export:false, settings:false})}} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors">
-                                            <Icons.Code className="w-4 h-4 text-slate-500"/> JSON
+                                            <Icons.Code className="w-4 h-4 text-slate-500"/> Export JSON Data
                                         </button>
                                     </div>
                                 )}
                             </div>
 
-                            {/* Settings Dropdown */}
                             {!isPreview && (
                                 <div className="relative">
                                     <button onClick={()=>setMenus({settings:!menus.settings, export:false})} className="btn-modern">
@@ -534,18 +645,15 @@
                         </div>
                     </header>
 
-                    {/* Main Content */}
                     <div id="schedule-content" className="flex-1 overflow-auto bg-slate-50/50 flex flex-col">
                         <div className="px-6 py-6 max-w-[1600px] w-full mx-auto flex-1 flex flex-col">
-                            {/* Stats */}
                             <div className="flex flex-col md:flex-row gap-4 mb-8">
-                                <StatCard title="Duration" value={`${stats.duration} Mo`} subtext={`${stats.start.getFullYear()}-${stats.end.getFullYear()}`} icon={Icons.Calendar} />
+                                <StatCard title="Duration" value={`${stats.duration} Mo`} subtext={`${stats.start.getFullYear()} - ${stats.end.getFullYear()}`} icon={Icons.Calendar} />
                                 <StatCard title="Activities" value={stats.total} subtext={`${stats.completed} Done`} icon={Icons.List} />
                                 <StatCard title="Completion" value={`${Math.round((stats.completed/stats.total)*100)||0}%`} icon={Icons.CheckCircle} />
                                 <StatCard title="Attention" value={stats.atRisk} subtext="Overdue/Risk" trend={stats.atRisk>0?'bad':'good'} icon={Icons.Alert} />
                             </div>
 
-                            {/* Toolbar */}
                             {!isPreview && (
                                 <div className="flex flex-col lg:flex-row justify-between items-center gap-4 mb-4 no-print">
                                     <div className="flex bg-white border border-slate-200 rounded-lg p-1 shadow-sm">
@@ -565,7 +673,6 @@
                                 </div>
                             )}
 
-                            {/* Views */}
                             <div className={`bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden min-h-[500px] flex flex-col flex-1 ${isPreview?'border-none shadow-none':''}`}>
                                 {view === 'table' ? (
                                     <ListView tasks={filtered} owners={owners} isPreview={isPreview} onUpdate={handleUpdate} onDelete={handleDelete} onMove={handleMove} onIndent={handleIndent} onAdd={handleAdd} />
@@ -576,14 +683,13 @@
                                 )}
                             </div>
                             
-                            {/* Holiday Footer */}
                             {upcomingHolidays.length > 0 && (
                                 <div className="mt-6 p-4 bg-white rounded-lg border border-slate-200 shadow-sm">
                                     <h4 className="text-sm font-bold text-slate-700 mb-2 flex items-center gap-2"><Icons.Sun className="w-4 h-4 text-amber-500"/> Upcoming Holidays</h4>
                                     <div className="flex flex-wrap gap-4">
                                         {upcomingHolidays.slice(0, 5).map((h, i) => (
                                             <div key={i} className="text-xs bg-slate-50 px-3 py-1.5 rounded-md border border-slate-100 text-slate-600">
-                                                <span className="font-semibold text-slate-900">{new Date(h.date).toLocaleDateString()}</span> - {h.name}
+                                                <span className="font-semibold text-slate-900">{new Date(h.date+"T00:00:00").toLocaleDateString()}</span> - {h.name}
                                             </div>
                                         ))}
                                     </div>
@@ -594,8 +700,6 @@
                 </div>
             );
         };
-
-        // --- Sub-Components ---
 
         const ListView = ({ tasks, owners, isPreview, onUpdate, onDelete, onMove, onIndent, onAdd }) => (
             <div className="overflow-x-auto flex-1">
@@ -683,62 +787,118 @@
         );
 
         const GanttView = ({ tasks, owners, holidays }) => {
-            const { months, processed, todayPos } = useMemo(() => {
-                if(!tasks.length) return { months:[], processed:[], todayPos: 0 };
-                const sorted = [...tasks].sort((a,b) => new Date(a.start) - new Date(b.start));
-                const min = new Date(sorted[0].start); min.setMonth(min.getMonth()-1);
-                const max = new Date(sorted.reduce((m,t)=>new Date(t.end)>m?new Date(t.end):m, new Date())); max.setMonth(max.getMonth()+2);
+            const { months, processed, todayPos, totalDays } = useMemo(() => {
+                if(!tasks.length) return { months:[], processed:[], todayPos: 0, totalDays: 1 };
                 
-                const totalDays = (max - min) / (86400000);
+                const parseDate = (ds) => new Date(ds + "T00:00:00");
+                const sorted = [...tasks].sort((a,b) => parseDate(a.start) - parseDate(b.start));
+                
+                const firstStart = parseDate(sorted[0].start);
+                const lastEnd = new Date(sorted.reduce((m,t) => {
+                    const d = parseDate(t.end);
+                    return d > m ? d : m;
+                }, new Date()));
+                
+                const min = new Date(firstStart.getFullYear(), firstStart.getMonth() - 1, 1);
+                const max = new Date(lastEnd.getFullYear(), lastEnd.getMonth() + 2, 0); 
+                
                 const monthsArr = [];
-                let curr = new Date(min);
-                while(curr < max) { monthsArr.push(new Date(curr)); curr.setMonth(curr.getMonth()+1); }
+                let curr = new Date(min.getFullYear(), min.getMonth(), 1);
+                while(curr <= max) {
+                    const daysInMonth = new Date(curr.getFullYear(), curr.getMonth() + 1, 0).getDate();
+                    monthsArr.push({
+                        date: new Date(curr),
+                        days: daysInMonth
+                    });
+                    curr.setMonth(curr.getMonth() + 1);
+                }
 
+                const tDays = monthsArr.reduce((sum, m) => sum + m.days, 0);
+                
                 const now = new Date();
-                const todayPos = ((now - min) / 86400000 / totalDays) * 100;
+                const todayPos = ((now - min) / 86400000 / tDays) * 100;
 
                 return {
                     months: monthsArr,
                     todayPos: todayPos,
-                    processed: tasks.map(t => ({
-                        ...t,
-                        left: ((new Date(t.start)-min)/86400000/totalDays)*100,
-                        width: Math.max(((new Date(t.end)-new Date(t.start))/86400000/totalDays)*100, 0.5)
-                    }))
+                    totalDays: tDays,
+                    processed: tasks.map(t => {
+                        const tStart = parseDate(t.start);
+                        const tEnd = parseDate(t.end);
+                        
+                        const leftDays = (tStart - min) / 86400000;
+                        const durationDays = (tEnd - tStart) / 86400000 + 1; 
+                        
+                        return {
+                            ...t,
+                            left: (leftDays / tDays) * 100,
+                            width: Math.max((durationDays / tDays) * 100, 0.5)
+                        };
+                    })
                 };
             }, [tasks]);
 
+            // HORIZONTALLY OPTIMIZE FOR A3 ASPECT RATIO
+            // A3 Landscape Ratio is ~1.414. We use 1.6 to safely account for the stats header above the chart.
+            // When this exports, html2pdf will scale this 1.6-width to exactly A3 width (420mm). 
+            // The scaled height is naturally guaranteed to be <= 297mm, ensuring a PERFECT 1-page fit.
+            const a3SafeRatio = 1.6;
+            const estimatedTotalHeight = (processed.length * 48) + 40 + 150; // total rows + chart header + padding
+            const requiredTotalWidth = estimatedTotalHeight * a3SafeRatio;
+            
+            // Subtract the fixed 300px left sidebar to find the minimal required right-side timeline width
+            const timelineMinWidth = Math.max(800, months.length * 85, requiredTotalWidth - 300);
+
             return (
-                <div className="flex flex-col h-full bg-white overflow-hidden relative">
-                    <div className="flex border-b border-slate-200 bg-slate-50 sticky top-0 z-30">
-                        <div className="w-[300px] flex-shrink-0 border-r border-slate-200 p-3 text-xs font-bold text-slate-500 uppercase">Activity</div>
-                        <div className="flex-1 relative h-10 flex overflow-hidden">
-                            {months.map((m,i) => <div key={i} className="flex-1 border-r border-slate-200 p-2 text-xs font-medium text-slate-400 whitespace-nowrap min-w-[100px]">{m.toLocaleDateString('en-US',{month:'short',year:'2-digit'})}</div>)}
+                <div className="flex-1 overflow-auto bg-white relative gantt-scroll">
+                    <div className="min-w-max flex flex-col relative h-full">
+                        
+                        {/* Header Container */}
+                        <div className="flex border-b border-slate-200 bg-slate-50 sticky top-0 z-40">
+                            {/* Sticky Left Title */}
+                            <div className="w-[300px] flex-shrink-0 border-r border-slate-200 p-3 text-xs font-bold text-slate-500 uppercase sticky left-0 z-50 bg-slate-50 shadow-[2px_0_5px_rgba(0,0,0,0.02)]">
+                                Activity
+                            </div>
+                            
+                            {/* Timeline Scale Container */}
+                            <div className="relative h-10 flex flex-1" style={{ width: `${timelineMinWidth}px` }}>
+                                {months.map((m,i) => (
+                                    <div key={i} className="flex-shrink-0 border-r border-slate-200 p-2 text-xs font-medium text-slate-400 whitespace-nowrap overflow-hidden text-ellipsis text-center" style={{width: `${(m.days / totalDays) * 100}%`}}>
+                                        {m.date.toLocaleDateString('en-US',{month:'short', year:'numeric'})}
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                    <div className="flex-1 overflow-auto gantt-scroll relative">
-                        <div className="absolute inset-0 flex ml-[300px] pointer-events-none h-full">
-                            {/* Today Line */}
-                            {todayPos >= 0 && todayPos <= 100 && (
-                                <div className="absolute top-0 bottom-0 w-px border-l-2 border-red-400 border-dashed z-40" style={{left: `${todayPos}%`}}>
-                                    <div className="absolute -top-1 -left-1 w-2 h-2 rounded-full bg-red-500"></div>
-                                </div>
-                            )}
-                            {months.map((_,i) => <div key={i} className="flex-1 border-r border-slate-100 h-full"></div>)}
-                        </div>
-                        {processed.map(t => (
-                            <div key={t.id} className="flex border-b border-slate-50 hover:bg-slate-50 min-h-[48px] items-center relative z-10">
-                                <div className="w-[300px] flex-shrink-0 border-r border-slate-200 px-4 py-2 text-sm bg-white sticky left-0 z-20 whitespace-normal leading-tight">
-                                    <span className={t.isHeader ? "font-bold text-slate-800" : "text-slate-600 pl-4"}>{t.task}</span>
-                                </div>
-                                <div className="flex-1 relative h-full py-3">
-                                    <div className={`absolute h-5 rounded-full shadow-sm flex items-center justify-center text-[10px] text-white font-bold overflow-hidden ${t.status==='Completed'?'bg-emerald-400':t.computedStatus==='Overdue'?'bg-red-500':owners[t.owner]?.color.split(' ')[0].replace('100','500') || 'bg-slate-400'}`} style={{left:`${t.left}%`, width:`${t.width}%`}}>
-                                        <div className="absolute left-0 top-0 h-full bg-white/20 rounded-full" style={{width:`${t.progress}%`}}></div>
-                                        <span className="relative z-10 drop-shadow-md">{t.progress}%</span>
+
+                        {/* Task Body Area */}
+                        <div className="relative flex-1">
+                            {/* Static Grid Layer */}
+                            <div className="absolute top-0 bottom-0 pointer-events-none flex z-0" style={{ left: '300px', width: `${timelineMinWidth}px` }}>
+                                {months.map((m,i) => (
+                                    <div key={i} className="flex-shrink-0 border-r border-slate-100 h-full" style={{width: `${(m.days / totalDays) * 100}%`}}></div>
+                                ))}
+                                {todayPos >= 0 && todayPos <= 100 && (
+                                    <div className="absolute top-0 bottom-0 w-px border-l-2 border-red-400 border-dashed z-10" style={{left: `${todayPos}%`}}>
+                                        <div className="absolute -top-1 -left-1 w-2 h-2 rounded-full bg-red-500"></div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Activity Rows */}
+                            {processed.map(t => (
+                                <div key={t.id} className="flex border-b border-slate-50 hover:bg-slate-50/80 min-h-[48px] items-center relative z-10 group">
+                                    <div className="w-[300px] flex-shrink-0 border-r border-slate-200 px-4 py-2 text-sm bg-white sticky left-0 z-20 whitespace-normal leading-tight group-hover:bg-slate-50 shadow-[2px_0_5px_rgba(0,0,0,0.02)]">
+                                        <span className={t.isHeader ? "font-bold text-slate-800" : "text-slate-600 pl-4"}>{t.task}</span>
+                                    </div>
+                                    <div className="relative h-full py-3" style={{ width: `${timelineMinWidth}px` }}>
+                                        <div className={`absolute h-6 rounded shadow-sm flex items-center justify-center text-[10px] text-white font-bold overflow-hidden transition-all ${t.status==='Completed'?'bg-emerald-400':t.computedStatus==='Overdue'?'bg-red-500':owners[t.owner]?.color.split(' ')[0].replace('100','500') || 'bg-slate-400'}`} style={{left:`${t.left}%`, width:`${t.width}%`}}>
+                                            <div className="absolute left-0 top-0 h-full bg-black/10" style={{width:`${t.progress}%`}}></div>
+                                            {t.width > 3 && <span className="relative z-10 drop-shadow-md px-1 truncate">{t.progress}%</span>}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
                     </div>
                 </div>
             );
@@ -746,13 +906,12 @@
 
         const CalendarView = ({ tasks, owners, holidays }) => {
             const [currentDate, setCurrentDate] = useState(new Date());
-            const [mode, setMode] = useState('month'); // 'month' | 'year'
+            const [mode, setMode] = useState('month');
 
             const daysInMonth = (y, m) => new Date(y, m + 1, 0).getDate();
             
             const isWeekend = (d, m, y) => {
-                const date = new Date(y, m, d);
-                const day = date.getDay();
+                const day = new Date(y, m, d).getDay();
                 return day === 0 || day === 6;
             };
 
@@ -764,8 +923,8 @@
             const getTasksForDay = (d, m, y) => {
                 const date = new Date(y, m, d);
                 return tasks.filter(t => {
-                    const start = new Date(t.start); start.setHours(0,0,0,0);
-                    const end = new Date(t.end); end.setHours(23,59,59,999);
+                    const start = new Date(t.start + "T00:00:00");
+                    const end = new Date(t.end + "T23:59:59");
                     return date >= start && date <= end;
                 });
             };
@@ -786,16 +945,15 @@
                          
                          {days.map(d => {
                             const weekend = isWeekend(d, month, year);
-                            const dateStr = new Date(year, month, d).toISOString().split('T')[0];
+                            const dateStr = toLocalDateStr(new Date(year, month, d));
                             const holiday = holidays.find(h => h.date === dateStr);
                             const dayTasks = getTasksForDay(d, month, year);
                             const hasTask = dayTasks.length > 0;
                             const today = isToday(d, month, year);
                             
                             if (mini) {
-                                // Updated mini grid colors for pastel look
                                 let bgClass = 'bg-slate-50 text-slate-400';
-                                if (weekend) bgClass = 'bg-rose-50 text-red-400 font-bold'; // Weekend red
+                                if (weekend) bgClass = 'bg-rose-50 text-red-400 font-bold'; 
                                 if (hasTask) bgClass = 'bg-blue-100 text-blue-600 font-bold';
                                 if (holiday) bgClass = 'bg-amber-100 text-amber-600 font-bold';
                                 if (today) bgClass = 'ring-1 ring-red-500 font-bold';
