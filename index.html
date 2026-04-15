@@ -422,6 +422,7 @@
             });
 
             const [view, setView] = useState('gantt'); 
+            const [ganttScale, setGanttScale] = useState('monthly'); // New state for Gantt Zoom
             const [isPreview, setIsPreview] = useState(false);
             const [filterOwner, setFilterOwner] = useState('All');
             const [now, setNow] = useState(new Date());
@@ -736,8 +737,8 @@
                     </header>
 
                     <div id="schedule-content" className="flex-1 overflow-auto bg-slate-50/50 flex flex-col">
-                        <div className="px-6 py-6 max-w-[1600px] w-full mx-auto flex-1 flex flex-col">
-                            <div className="flex flex-col md:flex-row gap-4 mb-8">
+                        <div className="w-full flex-1 flex flex-col">
+                            <div className="flex flex-col md:flex-row gap-4 mb-4 px-4 pt-4">
                                 <StatCard title="Duration" value={`${stats.duration} Mo`} subtext={`${stats.start.getFullYear()} - ${stats.end.getFullYear()}`} icon={Icons.Calendar} />
                                 <StatCard title="Activities" value={stats.total} subtext={`${stats.completed} Done`} icon={Icons.List} />
                                 <StatCard title="Completion" value={`${Math.round((stats.completed/stats.total)*100)||0}%`} icon={Icons.CheckCircle} />
@@ -745,12 +746,23 @@
                             </div>
 
                             {!isPreview && (
-                                <div className="flex flex-col lg:flex-row justify-between items-center gap-4 mb-4 no-print">
-                                    <div className="flex bg-white border border-slate-200 rounded-lg p-1 shadow-sm">
-                                        {['table','gantt','calendar'].map(v => (
-                                            <button key={v} onClick={()=>setView(v)} className={`px-4 py-1.5 text-sm font-medium rounded-md capitalize transition-all ${view===v?'bg-brand-50 text-brand-700 shadow-sm':'text-slate-500 hover:text-slate-700'}`}>{v}</button>
-                                        ))}
+                                <div className="flex flex-col lg:flex-row justify-between items-center gap-4 mb-4 px-4 no-print">
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex bg-white border border-slate-200 rounded-lg p-1 shadow-sm">
+                                            {['table','gantt','calendar'].map(v => (
+                                                <button key={v} onClick={()=>setView(v)} className={`px-4 py-1.5 text-sm font-medium rounded-md capitalize transition-all ${view===v?'bg-brand-50 text-brand-700 shadow-sm':'text-slate-500 hover:text-slate-700'}`}>{v}</button>
+                                            ))}
+                                        </div>
+                                        
+                                        {view === 'gantt' && (
+                                            <div className="flex bg-white border border-slate-200 rounded-lg p-1 shadow-sm animate-fade-in">
+                                                {['weekly','monthly','quarterly','yearly'].map(s => (
+                                                    <button key={s} onClick={()=>setGanttScale(s)} className={`px-3 py-1.5 text-xs font-medium rounded-md capitalize transition-all ${ganttScale===s?'bg-brand-50 text-brand-700 shadow-sm':'text-slate-500 hover:text-slate-700'}`}>{s}</button>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
+
                                     <div className="flex items-center gap-3">
                                         <label className="cursor-pointer text-xs font-medium text-brand-600 hover:underline flex items-center gap-1">
                                             <input type="file" accept=".json" className="hidden" onChange={handleImport} /> <Icons.Upload className="w-3 h-3" /> Import
@@ -763,18 +775,18 @@
                                 </div>
                             )}
 
-                            <div className={`bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden min-h-[500px] flex flex-col flex-1 ${isPreview?'border-none shadow-none':''}`}>
+                            <div className={`bg-white border-y border-slate-200 shadow-sm overflow-hidden min-h-[500px] flex flex-col flex-1 ${isPreview?'border-none shadow-none':''}`}>
                                 {view === 'table' ? (
                                     <ListView tasks={filtered} owners={owners} isPreview={isPreview} onUpdate={handleUpdate} onDelete={handleDelete} onMove={handleMove} onIndent={handleIndent} onAdd={handleAdd} />
                                 ) : view === 'gantt' ? (
-                                    <GanttView tasks={filtered} owners={owners} holidays={holidays} />
+                                    <GanttView tasks={filtered} owners={owners} holidays={holidays} scale={ganttScale} />
                                 ) : (
                                     <CalendarView tasks={filtered} owners={owners} holidays={holidays} />
                                 )}
                             </div>
                             
                             {upcomingHolidays.length > 0 && (
-                                <div className="mt-6 p-4 bg-white rounded-lg border border-slate-200 shadow-sm">
+                                <div className="mt-4 mb-4 mx-4 p-4 bg-white rounded-lg border border-slate-200 shadow-sm">
                                     <h4 className="text-sm font-bold text-slate-700 mb-2 flex items-center gap-2"><Icons.Sun className="w-4 h-4 text-amber-500"/> Upcoming Holidays</h4>
                                     <div className="flex flex-wrap gap-4">
                                         {upcomingHolidays.slice(0, 5).map((h, i) => (
@@ -903,9 +915,9 @@
             </div>
         );
 
-        const GanttView = ({ tasks, owners, holidays }) => {
-            const { months, processed, todayPos, totalDays } = useMemo(() => {
-                if(!tasks.length) return { months:[], processed:[], todayPos: 0, totalDays: 1 };
+        const GanttView = ({ tasks, owners, holidays, scale = 'monthly' }) => {
+            const { columns, processed, todayPos, totalDays } = useMemo(() => {
+                if(!tasks.length) return { columns:[], processed:[], todayPos: 0, totalDays: 1 };
                 
                 const parseDate = (ds) => new Date(ds + "T00:00:00");
                 const sorted = [...tasks].sort((a,b) => parseDate(a.start) - parseDate(b.start));
@@ -916,27 +928,80 @@
                     return d > m ? d : m;
                 }, new Date()));
                 
-                const min = new Date(firstStart.getFullYear(), firstStart.getMonth() - 1, 1);
-                const max = new Date(lastEnd.getFullYear(), lastEnd.getMonth() + 2, 0); 
+                let min = new Date(firstStart);
+                let max = new Date(lastEnd);
+
+                // Add padding and align dates according to selected scale
+                if (scale === 'weekly') {
+                    min.setDate(min.getDate() - 14 - min.getDay()); 
+                    max.setDate(max.getDate() + 14 + (6 - max.getDay())); 
+                } else if (scale === 'monthly') {
+                    min = new Date(min.getFullYear(), min.getMonth() - 1, 1);
+                    max = new Date(max.getFullYear(), max.getMonth() + 2, 0);
+                } else if (scale === 'quarterly') {
+                    min = new Date(min.getFullYear(), Math.floor(min.getMonth() / 3) * 3 - 3, 1);
+                    max = new Date(max.getFullYear(), Math.floor(max.getMonth() / 3) * 3 + 6, 0);
+                } else if (scale === 'yearly') {
+                    min = new Date(min.getFullYear() - 1, 0, 1);
+                    max = new Date(max.getFullYear() + 1, 11, 31);
+                }
                 
-                const monthsArr = [];
-                let curr = new Date(min.getFullYear(), min.getMonth(), 1);
-                while(curr <= max) {
-                    const daysInMonth = new Date(curr.getFullYear(), curr.getMonth() + 1, 0).getDate();
-                    monthsArr.push({
-                        date: new Date(curr),
-                        days: daysInMonth
-                    });
-                    curr.setMonth(curr.getMonth() + 1);
+                const columnsArr = [];
+                let curr = new Date(min);
+
+                // Generate columns based on scale
+                if (scale === 'weekly') {
+                    while (curr <= max) {
+                        const next = new Date(curr);
+                        next.setDate(next.getDate() + 7);
+                        columnsArr.push({
+                            label: `${curr.toLocaleDateString('en-US',{month:'short', day:'numeric'})}`,
+                            days: 7,
+                            date: new Date(curr)
+                        });
+                        curr = next;
+                    }
+                } else if (scale === 'monthly') {
+                    while (curr <= max) {
+                        const daysInMonth = new Date(curr.getFullYear(), curr.getMonth() + 1, 0).getDate();
+                        columnsArr.push({
+                            label: curr.toLocaleDateString('en-US',{month:'short', year:'numeric'}),
+                            days: daysInMonth,
+                            date: new Date(curr)
+                        });
+                        curr.setMonth(curr.getMonth() + 1);
+                    }
+                } else if (scale === 'quarterly') {
+                    while (curr <= max) {
+                        const next = new Date(curr.getFullYear(), curr.getMonth() + 3, 1);
+                        const daysInQuarter = Math.round((next - curr) / 86400000);
+                        columnsArr.push({
+                            label: `Q${Math.floor(curr.getMonth() / 3) + 1} ${curr.getFullYear()}`,
+                            days: daysInQuarter,
+                            date: new Date(curr)
+                        });
+                        curr = next;
+                    }
+                } else if (scale === 'yearly') {
+                    while (curr <= max) {
+                        const next = new Date(curr.getFullYear() + 1, 0, 1);
+                        const daysInYear = Math.round((next - curr) / 86400000);
+                        columnsArr.push({
+                            label: `${curr.getFullYear()}`,
+                            days: daysInYear,
+                            date: new Date(curr)
+                        });
+                        curr = next;
+                    }
                 }
 
-                const tDays = monthsArr.reduce((sum, m) => sum + m.days, 0);
+                const tDays = columnsArr.reduce((sum, m) => sum + m.days, 0);
                 
                 const now = new Date();
                 const todayPos = ((now - min) / 86400000 / tDays) * 100;
 
                 return {
-                    months: monthsArr,
+                    columns: columnsArr,
                     todayPos: todayPos,
                     totalDays: tDays,
                     processed: tasks.map(t => {
@@ -953,12 +1018,19 @@
                         };
                     })
                 };
-            }, [tasks]);
+            }, [tasks, scale]);
 
             const a3SafeRatio = 1.6;
             const estimatedTotalHeight = (processed.length * 48) + 40 + 150; 
             const requiredTotalWidth = estimatedTotalHeight * a3SafeRatio;
-            const timelineMinWidth = Math.max(800, months.length * 85, requiredTotalWidth - 300);
+
+            // Dynamically assign column width based on scale to preserve readability
+            let baseColWidth = 85;
+            if (scale === 'weekly') baseColWidth = 60;
+            if (scale === 'quarterly') baseColWidth = 150;
+            if (scale === 'yearly') baseColWidth = 250;
+
+            const timelineMinWidth = Math.max(800, columns.length * baseColWidth, requiredTotalWidth - 300);
 
             return (
                 <div className="flex-1 overflow-auto bg-white relative gantt-scroll">
@@ -968,9 +1040,9 @@
                                 Activity
                             </div>
                             <div className="relative h-10 flex flex-1" style={{ width: `${timelineMinWidth}px` }}>
-                                {months.map((m,i) => (
-                                    <div key={i} className="flex-shrink-0 border-r border-slate-200 p-2 text-xs font-medium text-slate-400 whitespace-nowrap overflow-hidden text-ellipsis text-center" style={{width: `${(m.days / totalDays) * 100}%`}}>
-                                        {m.date.toLocaleDateString('en-US',{month:'short', year:'numeric'})}
+                                {columns.map((c, i) => (
+                                    <div key={i} className="flex-shrink-0 border-r border-slate-200 p-2 text-xs font-medium text-slate-400 whitespace-nowrap overflow-hidden text-ellipsis text-center" style={{width: `${(c.days / totalDays) * 100}%`}}>
+                                        {c.label}
                                     </div>
                                 ))}
                             </div>
@@ -978,8 +1050,8 @@
 
                         <div className="relative flex-1">
                             <div className="absolute top-0 bottom-0 pointer-events-none flex z-0" style={{ left: '300px', width: `${timelineMinWidth}px` }}>
-                                {months.map((m,i) => (
-                                    <div key={i} className="flex-shrink-0 border-r border-slate-100 h-full" style={{width: `${(m.days / totalDays) * 100}%`}}></div>
+                                {columns.map((c, i) => (
+                                    <div key={i} className="flex-shrink-0 border-r border-slate-100 h-full" style={{width: `${(c.days / totalDays) * 100}%`}}></div>
                                 ))}
                                 {todayPos >= 0 && todayPos <= 100 && (
                                     <div className="absolute top-0 bottom-0 w-px border-l-2 border-red-400 border-dashed z-10" style={{left: `${todayPos}%`}}>
