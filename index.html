@@ -83,6 +83,16 @@
         .btn-modern {
             @apply px-4 py-2 rounded-lg font-semibold text-sm transition-all shadow-sm border border-white/20 hover:bg-white/10 flex items-center gap-2;
         }
+
+        /* Hide number input spinners for the typing input */
+        input[type="number"].no-spinners::-webkit-inner-spin-button,
+        input[type="number"].no-spinners::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"].no-spinners {
+            -moz-appearance: textfield;
+        }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800 h-screen flex flex-col overflow-hidden selection:bg-brand-100 selection:text-brand-900">
@@ -152,6 +162,60 @@
             "Dev": { name: "Developer", color: "bg-amber-100 text-amber-800", avatar: "DV" },
             "Data Services": { name: "Data Services", color: "bg-purple-100 text-purple-800", avatar: "DS" },
             "Modeling": { name: "Modeling Team", color: "bg-cyan-100 text-cyan-800", avatar: "MT" }
+        };
+
+        // --- Core Business Logic: Hierarchical Aggregation Engine ---
+        const enforceHierarchy = (taskList) => {
+            if (!taskList || !Array.isArray(taskList)) return [];
+            
+            const childrenMap = new Map();
+            taskList.forEach(t => childrenMap.set(t.id, []));
+            
+            // Build Parent-Child Hierarchies based on Sequential Array Index and Depth Level
+            for (let i = 0; i < taskList.length; i++) {
+                for (let j = i - 1; j >= 0; j--) {
+                    if ((taskList[j].level || 0) < (taskList[i].level || 0)) {
+                        childrenMap.get(taskList[j].id).push(taskList[i]);
+                        break;
+                    }
+                }
+            }
+
+            // Recursively calculate percentage (Bottom-Up)
+            const getProgress = (taskId) => {
+                const children = childrenMap.get(taskId);
+                if (!children || children.length === 0) {
+                    const t = taskList.find(x => x.id === taskId);
+                    return t ? (t.progress || 0) : 0;
+                }
+                const total = children.reduce((sum, child) => sum + getProgress(child.id), 0);
+                return Math.round(total / children.length);
+            };
+
+            return taskList.map(t => {
+                const children = childrenMap.get(t.id);
+                const hasChildren = children && children.length > 0;
+                
+                // Average dynamically from children if parent, otherwise use manual typed value
+                const calculatedProgress = hasChildren ? getProgress(t.id) : (t.progress || 0);
+                
+                let newStatus = t.status;
+                if (hasChildren) {
+                    if (calculatedProgress === 100) newStatus = 'Completed';
+                    else if (calculatedProgress === 0 && newStatus === 'Completed') newStatus = 'Not Started';
+                    else if (calculatedProgress > 0 && calculatedProgress < 100 && (newStatus === 'Completed' || newStatus === 'Not Started')) newStatus = 'In Progress';
+                } else {
+                    if (calculatedProgress === 100) newStatus = 'Completed';
+                    if (calculatedProgress < 100 && newStatus === 'Completed') newStatus = 'In Progress';
+                }
+
+                return {
+                    ...t,
+                    progress: calculatedProgress,
+                    hasChildren,
+                    status: newStatus
+                };
+            });
         };
 
         const StatCard = ({ title, value, subtext, icon: IconComp, trend }) => (
@@ -315,21 +379,27 @@
 
         // --- Main Application ---
         const App = () => {
-            const loadState = (key, def) => {
-                const s = localStorage.getItem(key);
-                return s ? JSON.parse(s) : def;
-            };
-
             const [projectName, setProjectName] = useState(() => {
                 const unified = localStorage.getItem('app_state_v2');
                 return unified && JSON.parse(unified).projectName ? JSON.parse(unified).projectName : 'Data Hub Optimization';
             });
 
+            // Re-usable task updater ensuring that hierarchy is calculated natively into state
             const [tasks, setTasks] = useState(() => {
                 const unified = localStorage.getItem('app_state_v2'); 
-                if (unified) return JSON.parse(unified).tasks;
-                return INITIAL_DATA;
+                if (unified && JSON.parse(unified).tasks) {
+                    return enforceHierarchy(JSON.parse(unified).tasks);
+                }
+                return enforceHierarchy(INITIAL_DATA);
             });
+
+            const updateTasks = (action) => {
+                setTasks(prev => {
+                    const newTasks = typeof action === 'function' ? action(prev) : action;
+                    return enforceHierarchy(newTasks);
+                });
+            };
+
             const [owners, setOwners] = useState(() => {
                 const unified = localStorage.getItem('app_state_v2');
                 return unified ? JSON.parse(unified).owners : INITIAL_OWNERS;
@@ -366,6 +436,7 @@
                     let computedStatus = t.status;
                     const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
+                    // If not 100% complete and end date exceeded, flag as overdue
                     if (t.status !== 'Completed' && t.progress < 100 && endDate < todayMidnight) {
                         computedStatus = 'Overdue';
                     }
@@ -381,7 +452,6 @@
                 const start = dates.length ? new Date(Math.min(...dates)) : new Date();
                 const end = dates.length ? new Date(Math.max(...dates)) : new Date();
                 
-                // Use 30.44 days per month for a more accurate dynamic calendar duration
                 const duration = Math.max(0, Math.round((end - start)/(1000*60*60*24*30.44)));
 
                 const total = processed.length;
@@ -395,7 +465,7 @@
             }, [tasks, now]);
 
             const handleUpdate = (id, field, value) => {
-                setTasks(prev => prev.map(t => {
+                updateTasks(prev => prev.map(t => {
                     if (t.id !== id) return t;
                     const u = { ...t, [field]: value };
                     
@@ -414,11 +484,11 @@
                 const temp = newTasks[idx];
                 newTasks[idx] = newTasks[idx + direction];
                 newTasks[idx + direction] = temp;
-                setTasks(newTasks);
+                updateTasks(newTasks);
             };
 
             const handleIndent = (id, change) => {
-                setTasks(prev => prev.map(t => t.id === id ? { ...t, level: Math.max(0, (t.level || 1) + change) } : t));
+                updateTasks(prev => prev.map(t => t.id === id ? { ...t, level: Math.max(0, (t.level || 1) + change) } : t));
             };
 
             const handleAdd = (idx = tasks.length - 1) => {
@@ -427,10 +497,10 @@
                 const newTask = { id: newId, task: "New Activity", start: today, end: today, progress: 0, status: "Not Started", owner: "PM", level: 1 };
                 const newTasks = [...tasks];
                 newTasks.splice(idx + 1, 0, newTask);
-                setTasks(newTasks);
+                updateTasks(newTasks);
             };
 
-            const handleDelete = (id) => setTasks(prev => prev.filter(t => t.id !== id));
+            const handleDelete = (id) => updateTasks(prev => prev.filter(t => t.id !== id));
 
             const handleSave = () => {
                 const state = { tasks, owners, holidays, projectName };
@@ -438,18 +508,14 @@
                 setToast(true); setTimeout(() => setToast(false), 2000);
             };
 
-            // OPTIMIZED PDF EXPORT (A3 Landscape Fit)
             const handleExportPDF = () => {
                 const wasPreview = isPreview;
                 setIsPreview(true);
                 setTimeout(() => {
                     const element = document.getElementById('schedule-content');
                     const oldOverflow = element.style.overflow;
-                    element.style.overflow = 'visible'; // Unconstrain for full capture
+                    element.style.overflow = 'visible';
 
-                    // Using A3 format. Due to our dynamic 1.6 aspect ratio on the Gantt chart,
-                    // when html2pdf scales this element's width to fit A3 Landscape (420mm),
-                    // the resulting scaled height will easily fit perfectly within A3's 297mm height.
                     const opt = {
                         margin: 0.3,
                         filename: `${projectName.replace(/\s+/g, '_')}_A3.pdf`,
@@ -462,11 +528,7 @@
                             windowWidth: element.scrollWidth,
                             windowHeight: element.scrollHeight
                         },
-                        jsPDF: { 
-                            unit: 'in', 
-                            format: 'a3', // True A3 standard format
-                            orientation: 'landscape' // Horizontally optimized
-                        }
+                        jsPDF: { unit: 'in', format: 'a3', orientation: 'landscape' }
                     };
 
                     html2pdf().set(opt).from(element).save().then(() => {
@@ -521,7 +583,6 @@
                         <style>
                             body { background: #f8fafc; padding: 20px; font-family: 'Inter', sans-serif; }
                             #schedule-content { overflow: visible !important; height: auto !important; max-width: none !important; }
-                            /* Disable edit features visually in static export */
                             input, select, button { pointer-events: none; }
                         </style>
                     </head>
@@ -552,7 +613,6 @@
                 const file = e.target.files[0];
                 if(!file) return;
 
-                // Dynamically update the project name based on the uploaded file's name
                 const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
                 setProjectName(nameWithoutExt);
 
@@ -560,9 +620,9 @@
                 r.onload = (evt) => {
                     try {
                         const json = JSON.parse(evt.target.result);
-                        if(Array.isArray(json)) setTasks(json);
+                        if(Array.isArray(json)) updateTasks(json);
                         else {
-                            if(json.tasks) setTasks(json.tasks);
+                            if(json.tasks) updateTasks(json.tasks);
                             if(json.owners) setOwners(json.owners);
                             if(json.holidays) setHolidays(json.holidays);
                             if(json.projectName) setProjectName(json.projectName);
@@ -761,13 +821,36 @@
                                     )}
                                 </td>
                                 <td className="px-6 py-3 text-center">
-                                    {!task.isHeader && (isPreview ? <StatusBadge status={task.computedStatus} /> : <select value={task.status} onChange={e=>onUpdate(task.id,'status',e.target.value)} className="text-xs border-none bg-transparent p-0"><option value="Not Started">Not Started</option><option value="In Progress">In Progress</option><option value="Completed">Completed</option><option value="At Risk">At Risk</option></select>)}
+                                    {!task.isHeader && (
+                                        task.hasChildren || isPreview ? 
+                                            <StatusBadge status={task.computedStatus || task.status} /> : 
+                                            <select value={task.status} onChange={e=>onUpdate(task.id,'status',e.target.value)} className="text-xs border-none bg-transparent p-0 focus:ring-0 cursor-pointer"><option value="Not Started">Not Started</option><option value="In Progress">In Progress</option><option value="Completed">Completed</option><option value="At Risk">At Risk</option></select>
+                                    )}
                                 </td>
                                 <td className="px-6 py-3 text-center">
-                                    <div className="flex items-center justify-center gap-2 w-24 mx-auto relative group/progress">
-                                        <div className="flex-1 h-1.5 bg-slate-200 rounded-full overflow-hidden relative"><div className={`h-full ${task.progress===100?'bg-emerald-500':'bg-brand-500'}`} style={{width:`${task.progress}%`}}></div></div>
-                                        <span className="text-xs text-slate-500 w-8 text-right font-medium">{task.progress}%</span>
-                                        <input type="number" value={task.progress} min="0" max="100" onChange={e=>onUpdate(task.id,'progress',parseInt(e.target.value))} className={`absolute inset-0 w-full opacity-0 cursor-pointer ${isPreview ? 'hidden' : ''}`} title="Edit Percentage"/>
+                                    <div className="flex items-center justify-center gap-2 w-28 mx-auto relative group/progress">
+                                        <div className="flex-1 h-1.5 bg-slate-200 rounded-full overflow-hidden relative">
+                                            <div className={`h-full transition-all ${task.progress===100?'bg-emerald-500':'bg-brand-500'}`} style={{width:`${task.progress}%`}}></div>
+                                        </div>
+                                        {(!task.hasChildren && !isPreview) ? (
+                                            <div className="w-10 flex items-center justify-end">
+                                                <input type="number" 
+                                                    value={task.progress} 
+                                                    onChange={e => {
+                                                        let val = parseInt(e.target.value);
+                                                        if(isNaN(val)) val = 0;
+                                                        if(val < 0) val = 0;
+                                                        if(val > 100) val = 100;
+                                                        onUpdate(task.id, 'progress', val);
+                                                    }} 
+                                                    className="w-7 text-xs bg-transparent border-none p-0 text-right font-medium text-slate-700 focus:ring-0 focus:bg-slate-100 rounded no-spinners transition-colors" 
+                                                    title="Type Exact Percentage"
+                                                />
+                                                <span className="text-xs text-slate-500 font-medium">%</span>
+                                            </div>
+                                        ) : (
+                                            <span className="text-xs text-slate-500 w-10 text-right font-medium">{task.progress}%</span>
+                                        )}
                                     </div>
                                 </td>
                                 {!isPreview && (
@@ -838,29 +921,18 @@
                 };
             }, [tasks]);
 
-            // HORIZONTALLY OPTIMIZE FOR A3 ASPECT RATIO
-            // A3 Landscape Ratio is ~1.414. We use 1.6 to safely account for the stats header above the chart.
-            // When this exports, html2pdf will scale this 1.6-width to exactly A3 width (420mm). 
-            // The scaled height is naturally guaranteed to be <= 297mm, ensuring a PERFECT 1-page fit.
             const a3SafeRatio = 1.6;
-            const estimatedTotalHeight = (processed.length * 48) + 40 + 150; // total rows + chart header + padding
+            const estimatedTotalHeight = (processed.length * 48) + 40 + 150; 
             const requiredTotalWidth = estimatedTotalHeight * a3SafeRatio;
-            
-            // Subtract the fixed 300px left sidebar to find the minimal required right-side timeline width
             const timelineMinWidth = Math.max(800, months.length * 85, requiredTotalWidth - 300);
 
             return (
                 <div className="flex-1 overflow-auto bg-white relative gantt-scroll">
                     <div className="min-w-max flex flex-col relative h-full">
-                        
-                        {/* Header Container */}
                         <div className="flex border-b border-slate-200 bg-slate-50 sticky top-0 z-40">
-                            {/* Sticky Left Title */}
                             <div className="w-[300px] flex-shrink-0 border-r border-slate-200 p-3 text-xs font-bold text-slate-500 uppercase sticky left-0 z-50 bg-slate-50 shadow-[2px_0_5px_rgba(0,0,0,0.02)]">
                                 Activity
                             </div>
-                            
-                            {/* Timeline Scale Container */}
                             <div className="relative h-10 flex flex-1" style={{ width: `${timelineMinWidth}px` }}>
                                 {months.map((m,i) => (
                                     <div key={i} className="flex-shrink-0 border-r border-slate-200 p-2 text-xs font-medium text-slate-400 whitespace-nowrap overflow-hidden text-ellipsis text-center" style={{width: `${(m.days / totalDays) * 100}%`}}>
@@ -870,9 +942,7 @@
                             </div>
                         </div>
 
-                        {/* Task Body Area */}
                         <div className="relative flex-1">
-                            {/* Static Grid Layer */}
                             <div className="absolute top-0 bottom-0 pointer-events-none flex z-0" style={{ left: '300px', width: `${timelineMinWidth}px` }}>
                                 {months.map((m,i) => (
                                     <div key={i} className="flex-shrink-0 border-r border-slate-100 h-full" style={{width: `${(m.days / totalDays) * 100}%`}}></div>
@@ -884,7 +954,6 @@
                                 )}
                             </div>
 
-                            {/* Activity Rows */}
                             {processed.map(t => (
                                 <div key={t.id} className="flex border-b border-slate-50 hover:bg-slate-50/80 min-h-[48px] items-center relative z-10 group">
                                     <div className="w-[300px] flex-shrink-0 border-r border-slate-200 px-4 py-2 text-sm bg-white sticky left-0 z-20 whitespace-normal leading-tight group-hover:bg-slate-50 shadow-[2px_0_5px_rgba(0,0,0,0.02)]">
@@ -892,7 +961,7 @@
                                     </div>
                                     <div className="relative h-full py-3" style={{ width: `${timelineMinWidth}px` }}>
                                         <div className={`absolute h-6 rounded shadow-sm flex items-center justify-center text-[10px] text-white font-bold overflow-hidden transition-all ${t.status==='Completed'?'bg-emerald-400':t.computedStatus==='Overdue'?'bg-red-500':owners[t.owner]?.color.split(' ')[0].replace('100','500') || 'bg-slate-400'}`} style={{left:`${t.left}%`, width:`${t.width}%`}}>
-                                            <div className="absolute left-0 top-0 h-full bg-black/10" style={{width:`${t.progress}%`}}></div>
+                                            <div className="absolute left-0 top-0 h-full bg-black/10 transition-all" style={{width:`${t.progress}%`}}></div>
                                             {t.width > 3 && <span className="relative z-10 drop-shadow-md px-1 truncate">{t.progress}%</span>}
                                         </div>
                                     </div>
