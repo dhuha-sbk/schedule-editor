@@ -237,6 +237,18 @@
         const pad = n => n < 10 ? '0'+n : n;
         const toLocalDateStr = (date) => `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`;
 
+        const getDaysDiff = (startStr, endStr) => {
+            const s = new Date(startStr + "T00:00:00");
+            const e = new Date(endStr + "T00:00:00");
+            return Math.round((e - s) / 86400000) + 1;
+        };
+
+        const addDays = (dateStr, days) => {
+            const d = new Date(dateStr + "T00:00:00");
+            d.setDate(d.getDate() + days - 1);
+            return toLocalDateStr(d);
+        };
+
         // --- Modals ---
         const TeamModal = ({ isOpen, onClose, owners, setOwners }) => {
             const [newId, setNewId] = useState("");
@@ -467,9 +479,27 @@
             const handleUpdate = (id, field, value) => {
                 updateTasks(prev => prev.map(t => {
                     if (t.id !== id) return t;
-                    const u = { ...t, [field]: value };
+                    const u = { ...t };
                     
-                    if (field === 'start' && new Date(value+"T00:00:00") > new Date(u.end+"T00:00:00")) u.end = value;
+                    if (field === 'start') {
+                        if (!value) return u; // Discard invalid/empty inputs to prevent math errors
+                        u.start = value;
+                        const dur = getDaysDiff(t.start, t.end);
+                        u.end = addDays(value, dur);
+                    } else if (field === 'end') {
+                        if (!value) return u;
+                        u.end = value;
+                        if (new Date(u.start+"T00:00:00") > new Date(value+"T00:00:00")) {
+                            u.start = value;
+                        }
+                    } else if (field === 'duration') {
+                        let dur = parseInt(value, 10);
+                        if (isNaN(dur) || dur < 1) dur = 1;
+                        u.end = addDays(u.start, dur);
+                    } else {
+                        u[field] = value;
+                    }
+                    
                     if (field === 'progress' && value === 100) u.status = 'Completed';
                     if (field === 'status' && value === 'Completed') u.progress = 100;
                     if (field === 'progress' && value < 100 && u.status === 'Completed') u.status = 'In Progress';
@@ -805,11 +835,15 @@
                                 </td>
                                 <td className="px-6 py-3 font-mono text-xs text-slate-600">
                                     {isPreview ? 
-                                        <span>{task.start} → {task.end}</span> : 
-                                        <div className="flex items-center gap-2">
-                                            <input type="date" value={task.start} onChange={e=>onUpdate(task.id,'start',e.target.value)} className="bg-transparent border-none p-0 w-24 text-xs" />
-                                            <span>→</span>
-                                            <input type="date" value={task.end} onChange={e=>onUpdate(task.id,'end',e.target.value)} className={`bg-transparent border-none p-0 w-24 text-xs ${task.warning ? 'text-red-600 font-bold' : ''}`} />
+                                        <span>{task.start} → {task.end} <span className="text-slate-400 font-bold ml-1">({getDaysDiff(task.start, task.end)}d)</span></span> : 
+                                        <div className="flex items-center gap-1.5">
+                                            <input type="date" value={task.start} onChange={e=>onUpdate(task.id,'start',e.target.value)} className="bg-transparent border border-transparent hover:border-slate-200 focus:border-brand-500 rounded p-0.5 w-[105px] text-[11px]" />
+                                            <span className="text-slate-400">→</span>
+                                            <input type="date" value={task.end} onChange={e=>onUpdate(task.id,'end',e.target.value)} className={`bg-transparent border border-transparent hover:border-slate-200 focus:border-brand-500 rounded p-0.5 w-[105px] text-[11px] ${task.warning ? 'text-red-600 font-bold' : ''}`} />
+                                            <div className="flex items-center ml-1 bg-slate-100 rounded px-1.5 border border-slate-200" title="Duration in Days">
+                                                <input type="number" value={getDaysDiff(task.start, task.end)} onChange={e=>onUpdate(task.id,'duration',e.target.value)} className="bg-transparent border-none p-0 w-8 text-[11px] text-right no-spinners font-bold text-brand-700 focus:ring-0" min="1"/>
+                                                <span className="text-[10px] text-slate-500 ml-0.5 font-bold">d</span>
+                                            </div>
                                         </div>
                                     }
                                 </td>
